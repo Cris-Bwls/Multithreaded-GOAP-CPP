@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\GOAP_Actions">
+      <UniqueIdentifier>{22fb162c-4904-45c7-adc6-299ce029a234}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application2D.cpp">
@@ -25,6 +28,9 @@
   <ItemGroup>
     <ClInclude Include="Application2D.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GOAPActionMove.h">
+      <Filter>Header Files\GOAP_Actions</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

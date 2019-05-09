@@ -1,10 +1,7 @@
 #include "GOAPActionBase.h"
 
-GOAPActionBase::GOAPActionBase(AI* pAI, Terrain* pTerrain)
+GOAPActionBase::GOAPActionBase()
 {
-	m_pAI = pAI; 
-	m_pTerrain = pTerrain;
-
 	m_bUsed = false;
 	m_nCost = 10;
 
@@ -25,54 +22,21 @@ bool GOAPActionBase::CheckProceduralPreconditions()
 
 void GOAPActionBase::Start()
 {
-	m_Status = EACTIONSTATUS_ACTIVE;
+	m_Status = EActionStatus::ACTIVE;
 }
 
 void GOAPActionBase::Run(float fDeltaTime)
 {
-	if (m_Status != EACTIONSTATUS_ACTIVE)
+	if (m_Status != EActionStatus::ACTIVE)
 		Start();
 }
 
 void GOAPActionBase::Finish()
 {
-	m_Status = EACTIONSTATUS_DONE;
-}
-
-bool GOAPActionBase::Act()
-{
-	return false;
-}
-
-bool GOAPActionBase::Move()
-{
-	return false;
-}
-
-bool GOAPActionBase::MoveToPos()
-{
-	auto targetPos = m_pAI->GetTargetPos();
-	auto path = m_pTerrain->GetPathToPos(m_pAI->GetPos(), *targetPos, true);
-	m_pAI->SetPath(path);
-	
-	if (path.size() == 0)
-		return false;
-	return true;
-
-}
-
-bool GOAPActionBase::MoveToObject()
-{
-	auto target = m_pAI->GetTarget();
-	auto path = m_pTerrain->GetPathToObject(m_pAI->GetPos(), (StaticObject*)target, false);
-	m_pAI->SetPath(path);
-
-	if (path.size() == 0)
-		return false;
-	return true;
+	m_Status = EActionStatus::DONE;
 }
 
 inline void GOAPActionBase::Reset()
 {
-	m_Status = EACTIONSTATUS_INACTIVE;
+	m_Status = EActionStatus::INACTIVE;
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 // DataTypes
 enum EDataType
@@ -26,15 +27,15 @@ struct Data
 
 struct WorldStateProperty
 {
-	inline WorldStateProperty(int nIdentifier, bool bData)
+	inline WorldStateProperty(unsigned int nIdentifier, bool bData)
 		: nIdentifier(nIdentifier), bData(bData) {};
 
-	int nIdentifier;
+	unsigned int nIdentifier;
 	// Data data;
 	bool bData = false;
 };
 
 struct WorldState
 {
-	WorldStateProperty WorldStateProperties[EGOAPSYMBOL_TOTAL];
+	std::vector<WorldStateProperty> WorldStateProperties;
 };

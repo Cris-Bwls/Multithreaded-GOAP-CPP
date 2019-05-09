@@ -2,15 +2,16 @@
 #include "GOAPActionBase.h"
 #include <algorithm>
 
-GOAPPlanner::GOAPPlanner()
+GOAPPlanner::GOAPPlanner(unsigned int worldStateSize)
 {
+	m_WorldStateSize = worldStateSize;
+
 	// Initialize Effect Map
-	for (int i = 0; i < EGOAPSYMBOL_TOTAL; ++i)
+	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
 	{
-		EGOAPSymbol currentSymbol = (EGOAPSymbol)i;
 		std::vector<GOAPActionBase*> newList;
 
-		m_EffectMap[currentSymbol] = newList;
+		m_EffectMap[i] = newList;
 	}
 }
 
@@ -34,7 +35,7 @@ void GOAPPlanner::PopulateEffectMap(std::vector<GOAPActionBase*> actionList)
 
 void GOAPPlanner::ChangeWorldState(WorldStateProperty pChange)
 {
-	m_WorldState.WorldStateProperties[pChange.eSymbol].bData = pChange.bData;
+	m_WorldState.WorldStateProperties[pChange.nIdentifier].bData = pChange.bData;
 }
 
 std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
@@ -47,26 +48,24 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 	WorldState planWorldState = m_WorldState;
 	
 	// Reset Effect Map
-	for (int i = 0; i < EGOAPSYMBOL_TOTAL; ++i)
+	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
 	{
-		EGOAPSymbol currentSymbol = (EGOAPSymbol)i;
-
-		for (unsigned int j = 0; j < m_EffectMap[currentSymbol].size(); ++j)
+		for (unsigned int j = 0; j < m_EffectMap[i].size(); ++j)
 		{
-			m_EffectMap[currentSymbol][j]->SetUsed(false);
-			m_EffectMap[currentSymbol][j]->SetPrev(nullptr);
-			m_EffectMap[currentSymbol][j]->m_nFailureCost = 0;
+			m_EffectMap[i][j]->SetUsed(false);
+			m_EffectMap[i][j]->SetPrev(nullptr);
+			m_EffectMap[i][j]->m_nFailureCost = 0;
 		}
 	}
 
-	auto worldStateData = m_WorldState.WorldStateProperties[goalState.eSymbol].bData;
+	auto worldStateData = m_WorldState.WorldStateProperties[goalState.nIdentifier].bData;
 	auto goalStateData = goalState.bData;
 
 	// Check if goal state is current world state
 	if (worldStateData == goalStateData)
 		return plan;
 
-	auto currentEffectActions = m_EffectMap[goalState.eSymbol];
+	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
 	for (unsigned int j = 0; j < currentEffectActions.size(); ++j)
 	{
@@ -88,19 +87,19 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 		// Check if Plan is Complete
 		bool bPlanComplete = false;
 		int nConditionSuccessCount = 0;
-		std::vector<EGOAPSymbol> requiredEffects;
+		std::vector<unsigned int> requiredEffects;
 
 		auto currentPreConditions = pCurrent->GetPreConditionList();
 		for (unsigned int i = 0; i < currentPreConditions.size(); ++i)
 		{
-			auto planStateData = planWorldState.WorldStateProperties[currentPreConditions[i].eSymbol].bData;
+			auto planStateData = planWorldState.WorldStateProperties[currentPreConditions[i].nIdentifier].bData;
 			auto preConditionData = currentPreConditions[i].bData;
 
 			if (planStateData == preConditionData)
 				++nConditionSuccessCount;
 			else
 			{
-				requiredEffects.push_back(currentPreConditions[i].eSymbol);
+				requiredEffects.push_back(currentPreConditions[i].nIdentifier);
 			}
 		}
 
@@ -148,13 +147,13 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 				auto currentPreConditions = pCurrent->GetPreConditionList();
 				for (unsigned int i = 0; i < currentPreConditions.size(); ++i)
 				{
-					auto worldStateData = planWorldState.WorldStateProperties[currentPreConditions[i].eSymbol].bData;
+					auto worldStateData = planWorldState.WorldStateProperties[currentPreConditions[i].nIdentifier].bData;
 					auto preConditionData = currentPreConditions[i].bData;
 
 					if (worldStateData == preConditionData)
 						++nPlanConditionSuccessCount;
 					else
-						requiredEffects.push_back(currentPreConditions[i].eSymbol);
+						requiredEffects.push_back(currentPreConditions[i].nIdentifier);
 				}
 
 				if (nPlanConditionSuccessCount != currentPreConditions.size())
@@ -174,7 +173,7 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 					}
 
 					// GOAL state reached return plan
-					if (goalState.bData == planWorldState.WorldStateProperties[goalState.eSymbol].bData)
+					if (goalState.bData == planWorldState.WorldStateProperties[goalState.nIdentifier].bData)
 						return plan;
 				}
 			}
@@ -233,7 +232,7 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 					auto neighbourPreConditions = pNeighbour->GetPreConditionList();
 					for (unsigned int k = 0; k < neighbourPreConditions.size(); ++k)
 					{
-						auto worldStateData = m_WorldState.WorldStateProperties[neighbourPreConditions[k].eSymbol].bData;
+						auto worldStateData = m_WorldState.WorldStateProperties[neighbourPreConditions[k].nIdentifier].bData;
 						auto preConditionData = neighbourPreConditions[k].bData;
 
 						// IF effect needed

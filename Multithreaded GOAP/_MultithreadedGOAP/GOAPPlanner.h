@@ -9,7 +9,7 @@ class GOAPActionBase;
 class GOAPPlanner
 {
 public:
-	GOAPPlanner();
+	GOAPPlanner(unsigned int worldStateSize);
 	~GOAPPlanner();
 
 	void PopulateEffectMap(std::vector<GOAPActionBase*> actionList);
@@ -18,8 +18,9 @@ public:
 	std::vector<GOAPActionBase*> MakePlan(WorldStateProperty goalState);
 
 private:
-	Agent* m_pAgent;
+	unsigned int m_WorldStateSize = 0;
+
 	WorldState m_WorldState;
-	std::map<EGOAPSymbol, std::vector<GOAPActionBase*>> m_EffectMap;
+	std::map<unsigned int, std::vector<GOAPActionBase*>> m_EffectMap;
 };
 

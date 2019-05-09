@@ -2,33 +2,30 @@
 #include <vector>
 #include "GOAPWorldState.h"
 
-enum ActionStatus
+enum class EActionStatus
 {
 	// EACTIONSTATUS_
 
-	EACTIONSTATUS_INACTIVE = 0,
-	EACTIONSTATUS_ACTIVE,
-	EACTIONSTATUS_DONE,
-	EACTIONSTATUS_FAILED
+	INACTIVE = 0,
+	ACTIVE,
+	DONE,
+	FAILED
 };
 
 class GOAPActionBase
 {
 public:
-	GOAPActionBase(AI* pAI, Terrain* pTerrain);
+	GOAPActionBase();
 	virtual ~GOAPActionBase();
 	
 	inline std::vector<WorldStateProperty> GetPreConditionList() { return m_PreConditionList; };
-	inline std::vector<EGOAPSymbol> GetEffectList() { return m_EffectList; };
+	inline std::vector<unsigned int> GetEffectList() { return m_EffectList; };
 
 	virtual void Start();
 	virtual void Run(float fDeltaTime);
 	virtual void Finish();
 
-	virtual bool Act();
-	virtual bool Move();
-	virtual bool MoveToPos();
-	virtual bool MoveToObject();
+	virtual bool Act() = 0;
 
 	virtual void Reset();
 
@@ -58,12 +55,9 @@ protected:
 	char* m_ActionName;
 
 	std::vector<WorldStateProperty> m_PreConditionList;
-	std::vector<EGOAPSymbol> m_EffectList;
+	std::vector<unsigned int> m_EffectList;
 
-	ActionStatus m_Status;
-
-	AI* m_pAI;
-	Terrain* m_pTerrain;
+	EActionStatus m_Status;
 
 	GOAPActionBase* m_pPrev;
 

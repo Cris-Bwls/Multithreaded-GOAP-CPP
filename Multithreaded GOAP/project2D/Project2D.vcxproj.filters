@@ -32,5 +32,8 @@
     <ClInclude Include="GOAPActionMove.h">
       <Filter>Header Files\GOAP_Actions</Filter>
     </ClInclude>
+    <ClInclude Include="EnumPrecondition.h">
+      <Filter>Header Files\GOAP_Actions</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

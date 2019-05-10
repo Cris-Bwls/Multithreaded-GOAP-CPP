@@ -3,10 +3,10 @@
 #include "GOAPActionBase.h"
 #include "EnumPrecondition.h"
 
-class GOAPActionMoveToTarget : GOAPActionBase
+class GOAPActionMoveToTarget : public GOAPActionBase
 {
 public:
-	GOAPActionMoveToTarget()
+	GOAPActionMoveToTarget() : GOAPActionBase::GOAPActionBase()
 	{
 		m_ActionName = "GOAPActionMoveToTarget";
 
@@ -20,10 +20,10 @@ public:
 	void Reset() {};
 };
 
-class GOAPActionMoveNearTarget : GOAPActionBase
+class GOAPActionMoveNearTarget : public GOAPActionBase
 {
 public:
-	GOAPActionMoveNearTarget()
+	GOAPActionMoveNearTarget() : GOAPActionBase::GOAPActionBase()
 	{
 		m_ActionName = "GOAPActionMoveNearTarget";
 

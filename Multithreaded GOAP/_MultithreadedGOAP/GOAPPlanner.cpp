@@ -5,6 +5,7 @@
 GOAPPlanner::GOAPPlanner(unsigned int worldStateSize)
 {
 	m_WorldStateSize = worldStateSize;
+	m_WorldState.WorldStateProperties.resize(worldStateSize, {0,false});
 
 	// Initialize Effect Map
 	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
@@ -89,12 +90,14 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 		int nConditionSuccessCount = 0;
 		std::vector<unsigned int> requiredEffects;
 
+		// Check for required preconditions for current node
 		auto currentPreConditions = pCurrent->GetPreConditionList();
 		for (unsigned int i = 0; i < currentPreConditions.size(); ++i)
 		{
 			auto planStateData = planWorldState.WorldStateProperties[currentPreConditions[i].nIdentifier].bData;
 			auto preConditionData = currentPreConditions[i].bData;
 
+			//Check if precondition is satisfied
 			if (planStateData == preConditionData)
 				++nConditionSuccessCount;
 			else
@@ -103,6 +106,7 @@ std::vector<GOAPActionBase*> GOAPPlanner::MakePlan(WorldStateProperty goalState)
 			}
 		}
 
+		// IF all preconditions satisfied
 		if (nConditionSuccessCount == currentPreConditions.size())
 		{
 			int nEffectCount = 0;

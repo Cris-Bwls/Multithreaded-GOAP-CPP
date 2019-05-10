@@ -3,6 +3,33 @@
 #include "Font.h"
 #include "Input.h"
 
+#include "GOAPActionAttack.h"
+#include "GOAPActionGet.h"
+#include "GOAPActionMove.h"
+#include "EnumPrecondition.h"
+
+void OriginalRecipe(GOAPPlanner* planner)
+{
+	planner->ChangeWorldState({ (uint)EPreconditions::NONE, true });
+	planner->ChangeWorldState({ (uint)EPreconditions::AtTarget, false });
+	planner->ChangeWorldState({ (uint)EPreconditions::NearTarget, false });
+	planner->ChangeWorldState({ (uint)EPreconditions::HaveWeapon_Melee, false });
+	planner->ChangeWorldState({ (uint)EPreconditions::HaveWeapon_Ranged, false });
+	planner->ChangeWorldState({ (uint)EPreconditions::TargetDead, false });
+}
+
+void GoalState(GOAPPlanner* planner)
+{	
+	auto plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
+	printf("Plan\n");
+	
+	for (auto i = plan.size(); i > 0; --i)
+	{
+		printf(plan[i - 1]->GetName());
+		printf("\n");
+	}
+}
+
 Application2D::Application2D() {
 
 }
@@ -22,6 +49,17 @@ bool Application2D::startup() {
 	
 	m_timer = 0;
 
+	actionList.push_back(new GOAPActionMoveToTarget());
+	actionList.push_back(new GOAPActionMoveNearTarget());
+	actionList.push_back(new GOAPActionAttackFist());
+	actionList.push_back(new GOAPActionAttackMelee());
+	actionList.push_back(new GOAPActionAttackRanged());
+	actionList.push_back(new GOAPActionGetWeaponMelee());
+	actionList.push_back(new GOAPActionGetWeaponRanged());
+
+	planner = new GOAPPlanner((uint)EPreconditions::TOTAL);
+	planner->PopulateEffectMap(actionList);
+
 	return true;
 }
 
@@ -31,6 +69,14 @@ void Application2D::shutdown() {
 	delete m_texture;
 	delete m_shipTexture;
 	delete m_2dRenderer;
+
+	delete planner;
+	
+	while (actionList.size() > 0)
+	{
+		delete actionList.back();
+		actionList.pop_back();
+	}
 }
 
 void Application2D::update(float deltaTime) {
@@ -43,6 +89,12 @@ void Application2D::update(float deltaTime) {
 	// exit the application
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
+
+	if (input->isKeyDown(aie::INPUT_KEY_1))
+	{
+		OriginalRecipe(planner);
+		GoalState(planner);
+	}
 }
 
 void Application2D::draw() {

@@ -3,6 +3,9 @@
 #include "Application.h"
 #include "Renderer2D.h"
 
+#include"GOAPActionBase.h"
+#include"GOAPPlanner.h"
+
 class Application2D : public aie::Application {
 public:
 
@@ -21,6 +24,9 @@ protected:
 	aie::Texture*		m_texture;
 	aie::Texture*		m_shipTexture;
 	aie::Font*			m_font;
+
+	std::vector<GOAPActionBase*> actionList;
+	GOAPPlanner* planner;
 
 	float m_timer;
 };

@@ -7,7 +7,9 @@ enum class EPreconditions : uint
 	NONE = 0U,
 	AtTarget,
 	NearTarget,
-	HaveWeapon,
+	HaveWeapon_Melee,
+	HaveWeapon_Ranged,
+	TargetDead,
 
 	TOTAL
 };

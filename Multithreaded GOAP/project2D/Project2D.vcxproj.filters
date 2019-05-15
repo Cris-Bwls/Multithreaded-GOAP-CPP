@@ -41,5 +41,8 @@
     <ClInclude Include="GOAPActionGet.h">
       <Filter>Header Files\GOAP_Actions</Filter>
     </ClInclude>
+    <ClInclude Include="GOAPActionTest.h">
+      <Filter>Header Files\GOAP_Actions</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

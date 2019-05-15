@@ -13,7 +13,7 @@ public:
 		m_PreConditionList.push_back({ (uint)EPreconditions::AtTarget, true });
 		m_EffectList.push_back({ (uint)EPreconditions::TargetDead });
 
-		m_nCost = 25;
+		m_nCost = 20;
 	}
 
 	bool Act() { return true; };
@@ -49,7 +49,7 @@ public:
 		m_PreConditionList.push_back({ (uint)EPreconditions::HaveWeapon_Ranged, true });
 		m_EffectList.push_back({ (uint)EPreconditions::TargetDead });
 
-		m_nCost = 5;
+		m_nCost = 4;
 	}
 
 	bool Act() { return true; };

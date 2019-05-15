@@ -6,6 +6,12 @@
 
 class GOAPActionBase;
 
+struct GOAPPlan
+{
+	bool isSuccessful = false;
+	std::vector<GOAPActionBase*> actions;
+};
+
 class GOAPPlanner
 {
 public:
@@ -15,7 +21,8 @@ public:
 	void PopulateEffectMap(std::vector<GOAPActionBase*> actionList);
 	void ChangeWorldState(WorldStateProperty pChange);
 
-	std::vector<GOAPActionBase*> MakePlan(WorldStateProperty goalState);
+	GOAPPlan MakePlan(WorldStateProperty goalState);
+	GOAPPlan NewPlan(WorldStateProperty goalState);
 
 private:
 	unsigned int m_WorldStateSize = 0;

@@ -2,11 +2,37 @@
 #include "Texture.h"
 #include "Font.h"
 #include "Input.h"
+#include <chrono>
+#include <iostream>
 
 #include "GOAPActionAttack.h"
 #include "GOAPActionGet.h"
 #include "GOAPActionMove.h"
 #include "EnumPrecondition.h"
+
+#include "GOAPActionTest.h"
+
+using namespace std::chrono;
+#define PLAN_COUNT 1
+
+static double totalTimeTaken = 0;
+static int count = 0;
+
+void Actions(std::vector<GOAPActionBase*> & actionList)
+{
+	actionList.push_back(new GOAPActionMoveToTarget());
+	actionList.push_back(new GOAPActionMoveNearTarget());
+	actionList.push_back(new GOAPActionAttackFist());
+	actionList.push_back(new GOAPActionAttackMelee());
+	actionList.push_back(new GOAPActionAttackRanged());
+	actionList.push_back(new GOAPActionGetWeaponMelee());
+	actionList.push_back(new GOAPActionGetWeaponRanged());
+	
+	//actionList.push_back(new GOAPActionTest01());
+	//actionList.push_back(new GOAPActionTest02());
+	//actionList.push_back(new GOAPActionTest03());
+	//actionList.push_back(new GOAPActionTest04());
+}
 
 void OriginalRecipe(GOAPPlanner* planner)
 {
@@ -20,13 +46,54 @@ void OriginalRecipe(GOAPPlanner* planner)
 
 void GoalState(GOAPPlanner* planner)
 {	
-	auto plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
-	printf("Plan\n");
-	
-	for (auto i = plan.size(); i > 0; --i)
+	GOAPPlan plan;
+	auto timeStart = high_resolution_clock::now();
+	for (int i = 0; i < PLAN_COUNT; ++i)
 	{
-		printf(plan[i - 1]->GetName());
-		printf("\n");
+		plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
+		//for (int j = 0; j < plan.actions.size(); /*NO ITER*/)
+		//{
+		//	auto prev = plan.actions[j]->GetPrev();
+		//	if (prev == nullptr)
+		//		++j;
+		//	else
+		//	{
+		//		if (std::find(plan.actions.begin(), plan.actions.end(), prev) != plan.actions.end())
+		//		{
+		//			++j;
+		//		}
+		//		else
+		//		{
+		//			//++j;
+		//			plan.actions.erase(plan.actions.begin() + j);
+		//		}
+		//	}
+		//}
+	}
+	auto timeEnd = high_resolution_clock::now();
+	auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);
+
+	std::cout << duration_cast<microseconds>(timeEnd - timeStart).count();
+	std::cout << std::endl;
+
+	totalTimeTaken += timeTaken.count();
+	count++;
+
+	std::cout << "AVG Time Taken = " << totalTimeTaken / count;
+	std::cout << std::endl;
+
+	printf("Final Plan\n");
+	if (plan.isSuccessful)
+	{
+		for (auto i = plan.actions.size(); i > 0; --i)
+		{
+			printf(plan.actions[i - 1]->GetName());
+			printf("\n");
+		}
+	}
+	else
+	{
+		printf("Plan Failed");
 	}
 }
 
@@ -42,20 +109,11 @@ bool Application2D::startup() {
 	
 	m_2dRenderer = new aie::Renderer2D();
 
-	m_texture = new aie::Texture("./textures/numbered_grid.tga");
-	m_shipTexture = new aie::Texture("./textures/ship.png");
-
 	m_font = new aie::Font("./font/consolas.ttf", 32);
 	
 	m_timer = 0;
 
-	actionList.push_back(new GOAPActionMoveToTarget());
-	actionList.push_back(new GOAPActionMoveNearTarget());
-	actionList.push_back(new GOAPActionAttackFist());
-	actionList.push_back(new GOAPActionAttackMelee());
-	actionList.push_back(new GOAPActionAttackRanged());
-	actionList.push_back(new GOAPActionGetWeaponMelee());
-	actionList.push_back(new GOAPActionGetWeaponRanged());
+	Actions(actionList);
 
 	planner = new GOAPPlanner((uint)EPreconditions::TOTAL);
 	planner->PopulateEffectMap(actionList);
@@ -66,8 +124,6 @@ bool Application2D::startup() {
 void Application2D::shutdown() {
 	
 	delete m_font;
-	delete m_texture;
-	delete m_shipTexture;
 	delete m_2dRenderer;
 
 	delete planner;

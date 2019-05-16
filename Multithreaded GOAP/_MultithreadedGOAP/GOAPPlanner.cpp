@@ -326,13 +326,6 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 
 GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 {
-	struct Plan
-	{
-		bool isComplete;
-		GOAPPlan data;
-		WorldState worldState;
-		int cost;
-	};
 
 	auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
 
@@ -364,4 +357,8 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
 	return preferredPlan.data;
+}
+
+void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans)
+{
 }

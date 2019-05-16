@@ -2,6 +2,8 @@
 #include "GOAPActionBase.h"
 #include <algorithm>
 
+using std::vector;
+
 GOAPPlanner::GOAPPlanner(unsigned int worldStateSize)
 {
 	m_WorldStateSize = worldStateSize;
@@ -324,10 +326,19 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 
 GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 {
+	struct Plan
+	{
+		bool isComplete;
+		GOAPPlan data;
+		WorldState worldState;
+		int cost;
+	};
+
 	auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
 
-	std::vector<GOAPActionBase*> plan;
-	std::vector<GOAPActionBase*> openList;
+	Plan preferredPlan;
+	vector<vector<Plan>> threadedPlans;
+	//vector<Plan> openList;
 
 	WorldState planWorldState = m_WorldState;
 
@@ -347,10 +358,10 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 
 	// Check if goal state is current world state
 	if (worldStateData == goalStateData)
-		return GOAPPlan({ true, plan });
+		return preferredPlan.data;
 
 	// Get Actions that cause required effect
 	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
-	return  GOAPPlan({ true, plan });
+	return preferredPlan.data;
 }

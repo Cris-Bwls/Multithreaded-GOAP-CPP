@@ -24,10 +24,21 @@ public:
 	GOAPPlan MakePlan(WorldStateProperty goalState);
 	GOAPPlan NewPlan(WorldStateProperty goalState);
 
-private:
-	unsigned int m_WorldStateSize = 0;
 
+private:
+	struct Plan
+	{
+		bool isComplete;
+		GOAPPlan data;
+		WorldState worldState;
+		int cost;
+	};
+
+	void ThreadPlan(std::vector<Plan> & plans);
+
+	unsigned int m_WorldStateSize = 0;
 	WorldState m_WorldState;
+
 	std::map<unsigned int, std::vector<GOAPActionBase*>> m_EffectMap;
 };
 

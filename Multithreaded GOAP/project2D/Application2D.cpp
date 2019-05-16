@@ -13,7 +13,7 @@
 #include "GOAPActionTest.h"
 
 using namespace std::chrono;
-#define PLAN_COUNT 1
+#define PLAN_COUNT 30
 
 static double totalTimeTaken = 0;
 static int count = 0;
@@ -51,24 +51,6 @@ void GoalState(GOAPPlanner* planner)
 	for (int i = 0; i < PLAN_COUNT; ++i)
 	{
 		plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
-		//for (int j = 0; j < plan.actions.size(); /*NO ITER*/)
-		//{
-		//	auto prev = plan.actions[j]->GetPrev();
-		//	if (prev == nullptr)
-		//		++j;
-		//	else
-		//	{
-		//		if (std::find(plan.actions.begin(), plan.actions.end(), prev) != plan.actions.end())
-		//		{
-		//			++j;
-		//		}
-		//		else
-		//		{
-		//			//++j;
-		//			plan.actions.erase(plan.actions.begin() + j);
-		//		}
-		//	}
-		//}
 	}
 	auto timeEnd = high_resolution_clock::now();
 	auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);

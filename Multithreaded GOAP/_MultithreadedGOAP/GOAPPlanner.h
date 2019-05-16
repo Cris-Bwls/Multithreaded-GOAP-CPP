@@ -24,6 +24,7 @@ public:
 	GOAPPlan MakePlan(WorldStateProperty goalState);
 	GOAPPlan NewPlan(WorldStateProperty goalState);
 
+	inline void SetThreadCount(unsigned int count) { m_nThreadCount = count; };
 
 private:
 	struct Plan
@@ -34,7 +35,9 @@ private:
 		int cost;
 	};
 
-	void ThreadPlan(std::vector<Plan> & plans);
+	void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, int & accessing, unsigned int const& threadNumber);
+
+	unsigned int m_nThreadCount = 1;
 
 	unsigned int m_WorldStateSize = 0;
 	WorldState m_WorldState;

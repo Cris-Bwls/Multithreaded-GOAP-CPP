@@ -4,6 +4,8 @@
 
 using std::vector;
 
+#define NO_ONE_ACCESSING -1
+
 GOAPPlanner::GOAPPlanner(unsigned int worldStateSize)
 {
 	m_WorldStateSize = worldStateSize;
@@ -326,14 +328,17 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 
 GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 {
-
 	auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
 
 	Plan preferredPlan;
-	vector<vector<Plan>> threadedPlans;
-	//vector<Plan> openList;
+	preferredPlan.cost = INT_MAX;
+	int accessing = NO_ONE_ACCESSING;
 
-	WorldState planWorldState = m_WorldState;
+	vector<vector<Plan>> threadedPlans;
+	for (int i = 0; i < m_nThreadCount; ++i)
+	{
+		threadedPlans.push_back(vector<Plan>());
+	}
 
 	// Reset Effect Map
 	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
@@ -342,7 +347,6 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 		{
 			m_EffectMap[i][j]->SetUsed(false);
 			m_EffectMap[i][j]->SetPrev(nullptr);
-			m_EffectMap[i][j]->m_nFailureCost = 0;
 		}
 	}
 
@@ -353,12 +357,33 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 	if (worldStateData == goalStateData)
 		return preferredPlan.data;
 
-	// Get Actions that cause required effect
+	// Get Initial Actions that cause required effect
 	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
+	// Assign those actions to a plan each and add that to a thread workload
+	for (unsigned int i = 0; i < currentEffectActions.size(); ++i)
+	{
+		auto pAction = currentEffectActions[i];
+
+		// Plan for action
+		Plan currentPlan;
+		currentPlan.cost = pAction->GetCost();
+		currentPlan.worldState = m_WorldState;
+		currentPlan.data.actions.push_back(pAction);
+
+		// Add to thread workload and sort by cost
+		int nThread = i % m_nThreadCount;
+		threadedPlans[nThread].push_back(currentPlan);
+		std::push_heap(threadedPlans[nThread].begin(), threadedPlans[nThread].end(),
+			[](Plan const& lhs, Plan const& rhs) {return lhs.cost > rhs.cost; });
+	}
+
+
+
+	// TEMP
 	return preferredPlan.data;
 }
 
-void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans)
+void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, int & accessing, unsigned int const& threadCount)
 {
 }

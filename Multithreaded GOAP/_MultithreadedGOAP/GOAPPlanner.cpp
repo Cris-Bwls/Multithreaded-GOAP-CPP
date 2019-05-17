@@ -3,16 +3,19 @@
 #include <algorithm>
 
 using std::vector;
+typedef unsigned int uint;
 
 #define NO_ONE_ACCESSING -1
 
-GOAPPlanner::GOAPPlanner(unsigned int worldStateSize)
+static auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
+
+GOAPPlanner::GOAPPlanner(uint worldStateSize)
 {
 	m_WorldStateSize = worldStateSize;
 	m_WorldState.WorldStateProperties.resize(worldStateSize, {0,false});
 
 	// Initialize Effect Map
-	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
+	for (uint i = 0; i < m_WorldStateSize; ++i)
 	{
 		std::vector<GOAPActionBase*> newList;
 
@@ -28,11 +31,11 @@ GOAPPlanner::~GOAPPlanner()
 void GOAPPlanner::PopulateEffectMap(std::vector<GOAPActionBase*> actionList)
 {
 	m_EffectMap.clear();
-	for (unsigned int i = 0; i < actionList.size(); ++i)
+	for (uint i = 0; i < actionList.size(); ++i)
 	{
 		auto actionEffects = actionList[i]->GetEffectList();
 
-		for (unsigned int j = 0; j < actionEffects.size(); ++j)
+		for (uint j = 0; j < actionEffects.size(); ++j)
 		{
 			m_EffectMap[actionEffects[j]].push_back(actionList[i]);
 		}
@@ -44,19 +47,17 @@ void GOAPPlanner::ChangeWorldState(WorldStateProperty pChange)
 	m_WorldState.WorldStateProperties[pChange.nIdentifier].bData = pChange.bData;
 }
 
-GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
-{
-	auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
-	
+GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty const& goalState)
+{	
 	std::vector<GOAPActionBase*> plan;
 	std::vector<GOAPActionBase*> openList;
 
 	WorldState planWorldState = m_WorldState;
 	
 	// Reset Effect Map
-	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
+	for (uint i = 0; i < m_WorldStateSize; ++i)
 	{
-		for (unsigned int j = 0; j < m_EffectMap[i].size(); ++j)
+		for (uint j = 0; j < m_EffectMap[i].size(); ++j)
 		{
 			m_EffectMap[i][j]->SetUsed(false);
 			m_EffectMap[i][j]->SetPrev(nullptr);
@@ -74,7 +75,7 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 	// Get Actions that cause required effect
 	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
-	for (unsigned int j = 0; j < currentEffectActions.size(); ++j)
+	for (uint j = 0; j < currentEffectActions.size(); ++j)
 	{
 		auto pAction = currentEffectActions[j];
 		openList.push_back(pAction);
@@ -96,11 +97,11 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 		// Check if Plan is Complete
 		bool bPlanComplete = false;
 		int nConditionSuccessCount = 0;
-		std::vector<unsigned int> requiredEffects;
+		std::vector<uint> requiredEffects;
 
 		// Check for required preconditions for current node
 		auto currentPreConditions = pCurrent->GetPreConditionList();
-		for (unsigned int i = 0; i < currentPreConditions.size(); ++i)
+		for (uint i = 0; i < currentPreConditions.size(); ++i)
 		{
 			auto planStateData = planWorldState.WorldStateProperties[currentPreConditions[i].nIdentifier].bData;
 			auto preConditionData = currentPreConditions[i].bData;
@@ -184,7 +185,7 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 				
 				int nPlanConditionSuccessCount = 0;
 				auto currentPreConditions = pCurrent->GetPreConditionList();
-				for (unsigned int i = 0; i < currentPreConditions.size(); ++i)
+				for (uint i = 0; i < currentPreConditions.size(); ++i)
 				{
 					auto worldStateData = planWorldState.WorldStateProperties[currentPreConditions[i].nIdentifier].bData;
 					auto preConditionData = currentPreConditions[i].bData;
@@ -224,11 +225,11 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 				return GOAPPlan({ true, plan });
 		}
 
-		for (unsigned int i = 0; i < requiredEffects.size(); ++i)
+		for (uint i = 0; i < requiredEffects.size(); ++i)
 		{
 			auto currentEffectActions = m_EffectMap[requiredEffects[i]];
 			
-			for (unsigned int j = 0; j < currentEffectActions.size(); ++j)
+			for (uint j = 0; j < currentEffectActions.size(); ++j)
 			{
 				auto pNeighbour = currentEffectActions[j];
 
@@ -258,7 +259,7 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 						int nHScore = 0;
 
 						auto neighbourPreConditions = pNeighbour->GetPreConditionList();
-						for (unsigned int k = 0; k < neighbourPreConditions.size(); ++k)
+						for (uint k = 0; k < neighbourPreConditions.size(); ++k)
 						{
 							auto worldStateData = m_WorldState.WorldStateProperties[neighbourPreConditions[k].nIdentifier].bData;
 							auto preConditionData = neighbourPreConditions[k].bData;
@@ -290,7 +291,7 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 					int nHScore = 0;
 					
 					auto neighbourPreConditions = pNeighbour->GetPreConditionList();
-					for (unsigned int k = 0; k < neighbourPreConditions.size(); ++k)
+					for (uint k = 0; k < neighbourPreConditions.size(); ++k)
 					{
 						auto worldStateData = m_WorldState.WorldStateProperties[neighbourPreConditions[k].nIdentifier].bData;
 						auto preConditionData = neighbourPreConditions[k].bData;
@@ -326,7 +327,7 @@ GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty goalState)
 	return GOAPPlan({ false, plan });
 }
 
-GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
+GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty const& goalState)
 {
 	auto SortHeapFunc = ([](GOAPActionBase* lhs, GOAPActionBase* rhs) {return lhs->GetFScore() > rhs->GetFScore(); });
 
@@ -341,9 +342,9 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 	}
 
 	// Reset Effect Map
-	for (unsigned int i = 0; i < m_WorldStateSize; ++i)
+	for (uint i = 0; i < m_WorldStateSize; ++i)
 	{
-		for (unsigned int j = 0; j < m_EffectMap[i].size(); ++j)
+		for (uint j = 0; j < m_EffectMap[i].size(); ++j)
 		{
 			m_EffectMap[i][j]->SetUsed(false);
 			m_EffectMap[i][j]->SetPrev(nullptr);
@@ -361,7 +362,7 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
 
 	// Assign those actions to a plan each and add that to a thread workload
-	for (unsigned int i = 0; i < currentEffectActions.size(); ++i)
+	for (uint i = 0; i < currentEffectActions.size(); ++i)
 	{
 		auto pAction = currentEffectActions[i];
 
@@ -374,16 +375,55 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty goalState)
 		// Add to thread workload and sort by cost
 		int nThread = i % m_nThreadCount;
 		threadedPlans[nThread].push_back(currentPlan);
-		std::push_heap(threadedPlans[nThread].begin(), threadedPlans[nThread].end(),
-			[](Plan const& lhs, Plan const& rhs) {return lhs.cost > rhs.cost; });
+		std::push_heap(threadedPlans[nThread].begin(), threadedPlans[nThread].end(), SortPlans);
 	}
 
+	for (int i = 1; i < m_nThreadCount; ++i)
+	{
+		// START THREADS HERE
+	}
+
+	//MAIN THREAD
+	ThreadPlan(threadedPlans[0], preferredPlan, accessing, 0, goalState);
 
 
 	// TEMP
 	return preferredPlan.data;
 }
 
-void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, int & accessing, unsigned int const& threadCount)
+void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, int & accessing, uint const& threadCount, WorldStateProperty const& goalState)
 {
+	
+	uint completedPlans = 0;
+	while (completedPlans < plans.size())
+	{
+		// Sort plans by  
+		std::sort(plans.begin(), plans.end(), SortPlans);
+
+		//Work on lowest cost plan
+		Plan currentPlan = plans[0];
+		currentPlan.worldState = m_WorldState;
+
+		auto currentAction = currentPlan.data.actions[0];
+
+		auto preconditions = currentAction->GetPreConditionList();
+		int satisfiedPreconditions = 0;
+
+		for (int i = 0; i < preconditions.size(); ++i)
+		{
+			uint nIdent = preconditions[i].nIdentifier;
+			bool neededData = preconditions[i].bData;
+			bool worldData = currentPlan.worldState.WorldStateProperties[nIdent].bData;
+
+			if (neededData == worldData)
+			{
+				satisfiedPreconditions++;
+			}
+			else
+			{
+				//HERENOW
+			}
+		}
+		
+	}
 }

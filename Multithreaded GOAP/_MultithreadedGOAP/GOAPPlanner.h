@@ -21,8 +21,8 @@ public:
 	void PopulateEffectMap(std::vector<GOAPActionBase*> actionList);
 	void ChangeWorldState(WorldStateProperty pChange);
 
-	GOAPPlan MakePlan(WorldStateProperty goalState);
-	GOAPPlan NewPlan(WorldStateProperty goalState);
+	GOAPPlan MakePlan(WorldStateProperty const& goalState);
+	GOAPPlan NewPlan(WorldStateProperty const& goalState);
 
 	inline void SetThreadCount(unsigned int count) { m_nThreadCount = count; };
 
@@ -34,8 +34,9 @@ private:
 		WorldState worldState;
 		int cost;
 	};
+	bool SortPlans(Plan const& lhs, Plan const& rhs) {return lhs.cost > rhs.cost; };
 
-	void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, int & accessing, unsigned int const& threadNumber);
+	void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, int & accessing, unsigned int const& threadNumber, WorldStateProperty const& goalState);
 
 	unsigned int m_nThreadCount = 1;
 

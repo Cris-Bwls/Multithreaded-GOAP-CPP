@@ -20,3 +20,9 @@ Original Run (for 50 Plan)
 With Ugly find that removes excess actions (50 plans)
 
 0.018109
+
+####################
+MakePlan (50 times)
+
+0.0148048
+0.0148251

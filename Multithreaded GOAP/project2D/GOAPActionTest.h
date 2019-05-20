@@ -47,7 +47,7 @@ public:
 		m_PreConditionList.push_back({ (uint)EPreconditions::NONE, true });
 		m_EffectList.push_back({ (uint)EPreconditions::AtTarget });
 
-		m_nCost = 5;
+		m_nCost = 4;
 	}
 
 	bool Act() { return true; };
@@ -64,7 +64,7 @@ public:
 		m_PreConditionList.push_back({ (uint)EPreconditions::NONE, true });
 		m_EffectList.push_back({ (uint)EPreconditions::NearTarget });
 
-		m_nCost = 5;
+		m_nCost = 2;
 	}
 
 	bool Act() { return true; };

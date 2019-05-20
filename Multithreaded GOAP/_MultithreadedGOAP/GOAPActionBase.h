@@ -18,8 +18,8 @@ public:
 	GOAPActionBase();
 	virtual ~GOAPActionBase();
 	
-	inline std::vector<WorldStateProperty> GetPreConditionList() { return m_PreConditionList; };
-	inline std::vector<unsigned int> GetEffectList() { return m_EffectList; };
+	inline std::vector<WorldStateProperty> const& GetPreConditionList() { return m_PreConditionList; };
+	inline std::vector<unsigned int> const& GetEffectList() { return m_EffectList; };
 
 	virtual void Start();
 	virtual void Run(float fDeltaTime);

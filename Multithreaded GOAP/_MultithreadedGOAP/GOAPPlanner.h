@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <map>
+#include <atomic>
 
 #include "GOAPWorldState.h"
 
@@ -34,9 +35,9 @@ private:
 		WorldState worldState;
 		int cost;
 	};
-	bool SortPlans(Plan const& lhs, Plan const& rhs) {return lhs.cost > rhs.cost; };
+	bool SortPlans(Plan lhs, Plan rhs) {return lhs.cost > rhs.cost; };
 
-	void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, int & accessing, unsigned int const& threadNumber, WorldStateProperty const& goalState);
+	void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, std::atomic<int> & accessing, unsigned int const& threadNumber, WorldStateProperty const& goalState);
 
 	unsigned int m_nThreadCount = 1;
 

@@ -13,7 +13,7 @@
 #include "GOAPActionTest.h"
 
 using namespace std::chrono;
-#define PLAN_COUNT 30
+#define PLAN_COUNT 50
 
 static double totalTimeTaken = 0;
 static int count = 0;
@@ -28,10 +28,10 @@ void Actions(std::vector<GOAPActionBase*> & actionList)
 	actionList.push_back(new GOAPActionGetWeaponMelee());
 	actionList.push_back(new GOAPActionGetWeaponRanged());
 	
-	//actionList.push_back(new GOAPActionTest01());
-	//actionList.push_back(new GOAPActionTest02());
-	//actionList.push_back(new GOAPActionTest03());
-	//actionList.push_back(new GOAPActionTest04());
+	actionList.push_back(new GOAPActionTest01());
+	actionList.push_back(new GOAPActionTest02());
+	actionList.push_back(new GOAPActionTest03());
+	actionList.push_back(new GOAPActionTest04());
 }
 
 void OriginalRecipe(GOAPPlanner* planner)
@@ -50,7 +50,7 @@ void GoalState(GOAPPlanner* planner)
 	auto timeStart = high_resolution_clock::now();
 	for (int i = 0; i < PLAN_COUNT; ++i)
 	{
-		plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
+		plan = planner->NewPlan({ (uint)EPreconditions::TargetDead, true });
 	}
 	auto timeEnd = high_resolution_clock::now();
 	auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);
@@ -64,7 +64,7 @@ void GoalState(GOAPPlanner* planner)
 	std::cout << "AVG Time Taken = " << totalTimeTaken / count;
 	std::cout << std::endl;
 
-	printf("Final Plan\n");
+	printf("Final Plan \n");
 	if (plan.isSuccessful)
 	{
 		for (auto i = plan.actions.size(); i > 0; --i)
@@ -75,7 +75,7 @@ void GoalState(GOAPPlanner* planner)
 	}
 	else
 	{
-		printf("Plan Failed");
+		printf("Plan Failed \n");
 	}
 }
 

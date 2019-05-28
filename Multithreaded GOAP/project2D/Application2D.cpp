@@ -13,6 +13,7 @@
 #include "GOAPActionTest.h"
 
 using namespace std::chrono;
+#define THREAD_COUNT 4
 #define PLAN_COUNT 50
 
 static double totalTimeTaken = 0;
@@ -99,6 +100,7 @@ bool Application2D::startup() {
 
 	planner = new GOAPPlanner((uint)EPreconditions::TOTAL);
 	planner->PopulateEffectMap(actionList);
+	planner->SetThreadCount(THREAD_COUNT);
 
 	return true;
 }

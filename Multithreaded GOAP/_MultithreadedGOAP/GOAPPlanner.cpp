@@ -1,6 +1,7 @@
 #include "GOAPPlanner.h"
 #include "GOAPActionBase.h"
 #include <algorithm>
+#include <thread>
 
 using std::vector;
 using std::atomic;
@@ -384,15 +385,21 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty const& goalState)
 			[](Plan const& lhs, Plan const& rhs) {return lhs.cost < rhs.cost; });
 	}
 
+	vector<std::thread> threads;
 	for (int i = 1; i < m_nThreadCount; ++i)
 	{
 		// START THREADS HERE
+		threads.push_back(std::thread(&GOAPPlanner::ThreadPlan, this, std::ref(threadedPlans[i]), std::ref(preferredPlan), std::ref(accessing), std::ref(i), std::ref(goalState)));
 	}
 
 	//MAIN THREAD
 	ThreadPlan(threadedPlans[0], preferredPlan, accessing, 0, goalState);
 
 	// JOIN THREADS HERE
+	for (int i = 0; i < threads.size(); ++i)
+	{
+		threads[i].join();
+	}
 
 	// TEMP
 	return preferredPlan.data;
@@ -410,6 +417,10 @@ void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, ato
 
 		//Work on lowest cost plan
 		Plan* currentPlan = &plans[0];
+
+		// IF COST GREATER THAN PREFFERED
+		if (preferredPlan.cost < currentPlan->cost)
+			return;
 
 		// PLAN COMPLETE
 		if (currentPlan->isComplete)
@@ -533,6 +544,7 @@ void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, ato
 						{
 							newPlan.data.actions.push_back(currentPlan->data.actions[k]);
 						}
+
 						newPlan.data.actions.push_back(actions[j]);
 						newPlan.cost = currentPlan->cost + actions[j]->GetCost();
 

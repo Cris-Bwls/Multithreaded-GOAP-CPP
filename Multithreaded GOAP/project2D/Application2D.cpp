@@ -13,7 +13,7 @@
 #include "GOAPActionTest.h"
 
 using namespace std::chrono;
-#define THREAD_COUNT 4
+#define THREAD_COUNT 1
 #define PLAN_COUNT 50
 
 static double totalTimeTaken = 0;

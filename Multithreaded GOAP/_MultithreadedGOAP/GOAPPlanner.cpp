@@ -345,17 +345,6 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty const& goalState)
 		threadedPlans.push_back(vector<Plan>());
 	}
 
-	// Reset Effect Map
-	// STR??
-	//for (uint i = 0; i < m_WorldStateSize; ++i)
-	//{
-	//	for (uint j = 0; j < m_EffectMap[i].size(); ++j)
-	//	{
-	//		m_EffectMap[i][j]->SetUsed(false);
-	//		m_EffectMap[i][j]->SetPrev(nullptr);
-	//	}
-	//}
-
 	auto worldStateData = m_WorldState.WorldStateProperties[goalState.nIdentifier].bData;
 	auto goalStateData = goalState.bData;
 
@@ -386,11 +375,17 @@ GOAPPlan GOAPPlanner::NewPlan(WorldStateProperty const& goalState)
 	}
 
 	vector<std::thread> threads;
+
+	// Bad Threading
+	/*
 	for (int i = 1; i < m_nThreadCount; ++i)
 	{
 		// START THREADS HERE
-		threads.push_back(std::thread(&GOAPPlanner::ThreadPlan, this, std::ref(threadedPlans[i]), std::ref(preferredPlan), std::ref(accessing), std::ref(i), std::ref(goalState)));
+		threads.push_back(std::thread(&GOAPPlanner::ThreadPlan, this, std::ref(threadedPlans[i]), 
+										std::ref(preferredPlan), std::ref(accessing), 
+										std::ref(i), std::ref(goalState)));
 	}
+	*/
 
 	//MAIN THREAD
 	ThreadPlan(threadedPlans[0], preferredPlan, accessing, 0, goalState);

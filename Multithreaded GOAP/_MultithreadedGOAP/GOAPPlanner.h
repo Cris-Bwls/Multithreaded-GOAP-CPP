@@ -19,11 +19,11 @@ public:
 	GOAPPlanner(unsigned int worldStateSize);
 	~GOAPPlanner();
 
-	void PopulateEffectMap(std::vector<GOAPActionBase*> actionList);
-	void ChangeWorldState(WorldStateProperty pChange);
-
+	void PopulateEffectMap(std::vector<GOAPActionBase*> const& actionList);
+	void ChangeWorldState(WorldState const& worldState);
 	GOAPPlan MakePlan(WorldStateProperty const& goalState);
-	GOAPPlan NewPlan(WorldStateProperty const& goalState);
+
+	GOAPPlan Planning(WorldStateProperty const& goalState, WorldState const& worldState, std::vector<GOAPActionBase*> const& actionList);
 
 	inline void SetThreadCount(unsigned int count) { m_nThreadCount = count; };
 

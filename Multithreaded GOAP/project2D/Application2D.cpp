@@ -51,7 +51,7 @@ void GoalState(GOAPPlanner* planner)
 	auto timeStart = high_resolution_clock::now();
 	for (int i = 0; i < PLAN_COUNT; ++i)
 	{
-		plan = planner->NewPlan({ (uint)EPreconditions::TargetDead, true });
+		plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
 	}
 	auto timeEnd = high_resolution_clock::now();
 	auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);

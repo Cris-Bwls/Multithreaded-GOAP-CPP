@@ -24,9 +24,6 @@
     <ClCompile Include="GOAPWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MTQueue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GOAPPlanner.h">
@@ -41,7 +38,7 @@
     <ClInclude Include="GOAPWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MTQueue.h">
+    <ClInclude Include="ThreadedQueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

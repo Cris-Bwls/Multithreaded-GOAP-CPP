@@ -37,5 +37,5 @@ struct WorldStateProperty
 
 struct WorldState
 {
-	std::vector<WorldStateProperty> WorldStateProperties;
+	std::vector<WorldStateProperty> properties;
 };

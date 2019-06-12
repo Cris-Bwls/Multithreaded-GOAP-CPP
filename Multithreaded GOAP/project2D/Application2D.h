@@ -4,7 +4,7 @@
 #include "Renderer2D.h"
 
 #include"GOAPActionBase.h"
-#include"GOAPPlanner.h"
+#include "GOAPWrapper.h"
 
 class Application2D : public aie::Application {
 public:
@@ -26,7 +26,10 @@ protected:
 	aie::Font*			m_font;
 
 	std::vector<GOAPActionBase*> actionList;
-	GOAPPlanner* planner;
+	GOAPWrapper* wrapper;
+
+	bool m_bNotifier = false;
+	GOAPPlan m_plan;
 
 	float m_timer;
 };

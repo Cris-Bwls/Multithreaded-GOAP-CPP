@@ -123,14 +123,13 @@
     <ClCompile Include="GOAPActionBase.cpp" />
     <ClCompile Include="GOAPPlanner.cpp" />
     <ClCompile Include="GOAPWrapper.cpp" />
-    <ClCompile Include="MTQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GOAPActionBase.h" />
     <ClInclude Include="GOAPPlanner.h" />
     <ClInclude Include="GOAPWorldState.h" />
     <ClInclude Include="GOAPWrapper.h" />
-    <ClInclude Include="MTQueue.h" />
+    <ClInclude Include="ThreadedQueue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -13,8 +13,8 @@
 #include "GOAPActionTest.h"
 
 using namespace std::chrono;
-#define THREAD_COUNT 1
-#define PLAN_COUNT 50
+#define THREAD_COUNT 5
+#define PLAN_COUNT 1
 
 static double totalTimeTaken = 0;
 static int count = 0;
@@ -35,49 +35,52 @@ void Actions(std::vector<GOAPActionBase*> & actionList)
 	actionList.push_back(new GOAPActionTest04());
 }
 
-void OriginalRecipe(GOAPPlanner* planner)
+void OriginalRecipe(WorldState* state)
 {
-	planner->ChangeWorldState({ (uint)EPreconditions::NONE, true });
-	planner->ChangeWorldState({ (uint)EPreconditions::AtTarget, false });
-	planner->ChangeWorldState({ (uint)EPreconditions::NearTarget, false });
-	planner->ChangeWorldState({ (uint)EPreconditions::HaveWeapon_Melee, false });
-	planner->ChangeWorldState({ (uint)EPreconditions::HaveWeapon_Ranged, false });
-	planner->ChangeWorldState({ (uint)EPreconditions::TargetDead, false });
+	(*state).properties.push_back({ (uint)EPreconditions::NONE, true });
+	(*state).properties.push_back({ (uint)EPreconditions::AtTarget, false });
+	(*state).properties.push_back({ (uint)EPreconditions::NearTarget, false });
+	(*state).properties.push_back({ (uint)EPreconditions::HaveWeapon_Melee, false });
+	(*state).properties.push_back({ (uint)EPreconditions::HaveWeapon_Ranged, false });
+	(*state).properties.push_back({ (uint)EPreconditions::TargetDead, false });
 }
 
-void GoalState(GOAPPlanner* planner)
-{	
-	GOAPPlan plan;
-	auto timeStart = high_resolution_clock::now();
+void GoalState(GOAPWrapper* wrapper, bool & notifier, GOAPPlan & plan)
+{
+	WorldState worldState;
+	OriginalRecipe(&worldState);
+
+	std::vector<GOAPActionBase*> actions;
+	Actions(actions);
+
+	WorldStateProperty goal = { (uint)EPreconditions::TargetDead, true };
+	
+	PlanData data;
+	data.pActionList = &actions;
+	data.pGoalState = &goal;
+	data.pNotification = &notifier;
+	data.pResult = &plan;
+	data.pWorldState = &worldState;
+
+	//auto timeStart = high_resolution_clock::now();
 	for (int i = 0; i < PLAN_COUNT; ++i)
 	{
-		plan = planner->MakePlan({ (uint)EPreconditions::TargetDead, true });
+		wrapper->AddPlan(data);
 	}
-	auto timeEnd = high_resolution_clock::now();
-	auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);
 
-	std::cout << duration_cast<microseconds>(timeEnd - timeStart).count();
-	std::cout << std::endl;
+	//auto timeEnd = high_resolution_clock::now();
+	//auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);
 
-	totalTimeTaken += timeTaken.count();
-	count++;
+	//std::cout << duration_cast<microseconds>(timeEnd - timeStart).count();
+	//std::cout << std::endl;
+	//
+	//totalTimeTaken += timeTaken.count();
+	//count++;
+	//
+	//std::cout << "AVG Time Taken = " << totalTimeTaken / count;
+	//std::cout << std::endl;
 
-	std::cout << "AVG Time Taken = " << totalTimeTaken / count;
-	std::cout << std::endl;
-
-	printf("Final Plan \n");
-	if (plan.isSuccessful)
-	{
-		for (auto i = plan.actions.size(); i > 0; --i)
-		{
-			printf(plan.actions[i - 1]->GetName());
-			printf("\n");
-		}
-	}
-	else
-	{
-		printf("Plan Failed \n");
-	}
+	
 }
 
 Application2D::Application2D() {
@@ -98,9 +101,7 @@ bool Application2D::startup() {
 
 	Actions(actionList);
 
-	planner = new GOAPPlanner((uint)EPreconditions::TOTAL);
-	planner->PopulateEffectMap(actionList);
-	planner->SetThreadCount(THREAD_COUNT);
+	wrapper = new GOAPWrapper(THREAD_COUNT);
 
 	return true;
 }
@@ -110,7 +111,7 @@ void Application2D::shutdown() {
 	delete m_font;
 	delete m_2dRenderer;
 
-	delete planner;
+	delete wrapper;
 	
 	while (actionList.size() > 0)
 	{
@@ -132,8 +133,25 @@ void Application2D::update(float deltaTime) {
 
 	if (input->isKeyDown(aie::INPUT_KEY_1))
 	{
-		OriginalRecipe(planner);
-		GoalState(planner);
+		GoalState(wrapper, m_bNotifier, m_plan);
+	}
+
+	if (m_bNotifier)
+	{
+		m_bNotifier = false;
+		printf("Final Plan \n");
+		if (m_plan.isSuccessful)
+		{
+			for (auto i = m_plan.actions.size(); i > 0; --i)
+			{
+				printf(m_plan.actions[i - 1]->GetName());
+				printf("\n");
+			}
+		}
+		else
+		{
+			printf("Plan Failed \n");
+		}
 	}
 }
 

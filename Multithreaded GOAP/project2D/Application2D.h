@@ -5,6 +5,7 @@
 
 #include"GOAPActionBase.h"
 #include "GOAPWrapper.h"
+#include "Unit.h"
 
 class Application2D : public aie::Application {
 public:
@@ -28,8 +29,8 @@ protected:
 	std::vector<GOAPActionBase*> actionList;
 	GOAPWrapper* wrapper;
 
-	bool m_bNotifier = false;
-	GOAPPlan m_plan;
+	std::vector<Unit*> units;
+	bool calculating;
 
 	float m_timer;
 };

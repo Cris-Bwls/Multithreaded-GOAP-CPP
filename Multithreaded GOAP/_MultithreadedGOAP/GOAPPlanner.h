@@ -4,14 +4,13 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <memory>
 #include "ThreadedQueue.h"
 #include "GOAPWorldState.h"
-
 
 class GOAPActionBase;
 struct GOAPPlan;
 struct PlanData;
-
 
 class GOAPPlanner
 {
@@ -19,25 +18,23 @@ public:
 	GOAPPlanner();
 	~GOAPPlanner();
 	void PopulateEffectMap(std::vector<GOAPActionBase*> const& actionList);
+	
+	void StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t const& threadCount);
 
-	//GOAPPlan & MakePlan(WorldStateProperty const& goalState);
-	//GOAPPlan & Planning(WorldStateProperty const& goalState, WorldState const& worldState, std::vector<GOAPActionBase*> const& actionList);
-
-	void StartThreaded(ThreadedQueue<PlanData> & dataQueue, size_t const& threadCount);
-
-	inline void Stop() { m_bStopped.store(true); }
+	void Stop();
 	void InputWake();
 
 private:
+	/*
+		Internal data structure for workers to work on
+	*/
 	struct Plan
 	{
 		bool isComplete = false;
-		GOAPPlan* data;
+		GOAPPlan data;
 		WorldState* worldState;
 		size_t cost = 0;
 	};
-
-	//void ThreadPlan(std::vector<Plan> & plans, Plan & preferredPlan, std::atomic<int> & accessing, size_t const& threadNumber, WorldStateProperty const& goalState);
 
 	void Worker();
 
@@ -61,7 +58,7 @@ private:
 	std::condition_variable m_cvResultWake;
 	std::atomic<bool> m_bResultWake;
 
-	// Sleeping Worker Variables
+	// Worker Waiting on data
 	std::mutex m_mxWakeWorker;
 	std::condition_variable m_cvWakeWorker;
 	std::atomic<bool> m_bWorkersAwake;
@@ -71,7 +68,7 @@ private:
 	WorldState m_WorldState;
 	WorldStateProperty* m_pGoalState;
 	std::map<size_t, std::vector<GOAPActionBase*>>* m_pEffectMap;
-	volatile Plan* m_pPreferredPlan;
+	Plan m_preferredPlan;
 	std::mutex m_mxPreferredPlan;
 };
 

@@ -5,83 +5,9 @@
 #include <chrono>
 #include <iostream>
 
-#include "GOAPActionAttack.h"
-#include "GOAPActionGet.h"
-#include "GOAPActionMove.h"
-#include "EnumPrecondition.h"
-
-#include "GOAPActionTest.h"
-
 using namespace std::chrono;
-#define THREAD_COUNT 5
-#define PLAN_COUNT 1
-
-static double totalTimeTaken = 0;
-static int count = 0;
-
-void Actions(std::vector<GOAPActionBase*> & actionList)
-{
-	actionList.push_back(new GOAPActionMoveToTarget());
-	actionList.push_back(new GOAPActionMoveNearTarget());
-	actionList.push_back(new GOAPActionAttackFist());
-	actionList.push_back(new GOAPActionAttackMelee());
-	actionList.push_back(new GOAPActionAttackRanged());
-	actionList.push_back(new GOAPActionGetWeaponMelee());
-	actionList.push_back(new GOAPActionGetWeaponRanged());
-	
-	actionList.push_back(new GOAPActionTest01());
-	actionList.push_back(new GOAPActionTest02());
-	actionList.push_back(new GOAPActionTest03());
-	actionList.push_back(new GOAPActionTest04());
-}
-
-void OriginalRecipe(WorldState* state)
-{
-	(*state).properties.push_back({ (uint)EPreconditions::NONE, true });
-	(*state).properties.push_back({ (uint)EPreconditions::AtTarget, false });
-	(*state).properties.push_back({ (uint)EPreconditions::NearTarget, false });
-	(*state).properties.push_back({ (uint)EPreconditions::HaveWeapon_Melee, false });
-	(*state).properties.push_back({ (uint)EPreconditions::HaveWeapon_Ranged, false });
-	(*state).properties.push_back({ (uint)EPreconditions::TargetDead, false });
-}
-
-void GoalState(GOAPWrapper* wrapper, bool & notifier, GOAPPlan & plan)
-{
-	WorldState worldState;
-	OriginalRecipe(&worldState);
-
-	std::vector<GOAPActionBase*> actions;
-	Actions(actions);
-
-	WorldStateProperty goal = { (uint)EPreconditions::TargetDead, true };
-	
-	PlanData data;
-	data.pActionList = &actions;
-	data.pGoalState = &goal;
-	data.pNotification = &notifier;
-	data.pResult = &plan;
-	data.pWorldState = &worldState;
-
-	//auto timeStart = high_resolution_clock::now();
-	for (int i = 0; i < PLAN_COUNT; ++i)
-	{
-		wrapper->AddPlan(data);
-	}
-
-	//auto timeEnd = high_resolution_clock::now();
-	//auto timeTaken = duration_cast<duration<double>>(timeEnd - timeStart);
-
-	//std::cout << duration_cast<microseconds>(timeEnd - timeStart).count();
-	//std::cout << std::endl;
-	//
-	//totalTimeTaken += timeTaken.count();
-	//count++;
-	//
-	//std::cout << "AVG Time Taken = " << totalTimeTaken / count;
-	//std::cout << std::endl;
-
-	
-}
+#define THREAD_COUNT 1
+#define UNIT_COUNT 50
 
 Application2D::Application2D() {
 
@@ -99,9 +25,12 @@ bool Application2D::startup() {
 	
 	m_timer = 0;
 
-	Actions(actionList);
-
 	wrapper = new GOAPWrapper(THREAD_COUNT);
+
+	for (int i = 0; i < UNIT_COUNT; ++i)
+	{
+		units.push_back(new Unit(wrapper, i));
+	}
 
 	return true;
 }
@@ -112,15 +41,42 @@ void Application2D::shutdown() {
 	delete m_2dRenderer;
 
 	delete wrapper;
-	
-	while (actionList.size() > 0)
+
+	while (units.size() > 0)
 	{
-		delete actionList.back();
-		actionList.pop_back();
+		delete units.back();
+		units.pop_back();
 	}
 }
 
+static bool test;
+static std::chrono::steady_clock::time_point startPlan;
+
+static double totalTimeTaken = 0;
+static int count = 0;
+
 void Application2D::update(float deltaTime) {
+
+	bool complete = true;
+	for (int i = 0; i < units.size(); ++i)
+	{
+		units[i]->Update();
+		complete &= units[i]->planComplete;
+	}
+	if (complete && test)
+	{
+		auto endTime = high_resolution_clock::now();
+		auto planTime = duration_cast<duration<double>>(endTime - startPlan);
+		totalTimeTaken += planTime.count();
+		count++;
+
+		std::cout << planTime.count();
+		std::cout << std::endl;
+		std::cout << "Average Time = " << totalTimeTaken / count;
+		std::cout << std::endl;
+		printf("DONE");
+		test = false;
+	}
 
 	m_timer += deltaTime;
 
@@ -131,26 +87,18 @@ void Application2D::update(float deltaTime) {
 	if (input->isKeyDown(aie::INPUT_KEY_ESCAPE))
 		quit();
 
-	if (input->isKeyDown(aie::INPUT_KEY_1))
+	if (complete)
 	{
-		GoalState(wrapper, m_bNotifier, m_plan);
-	}
-
-	if (m_bNotifier)
-	{
-		m_bNotifier = false;
-		printf("Final Plan \n");
-		if (m_plan.isSuccessful)
+		if (input->isKeyDown(aie::INPUT_KEY_1))
 		{
-			for (auto i = m_plan.actions.size(); i > 0; --i)
+			startPlan = high_resolution_clock::now();
+			test = true;
+			system("cls");
+			for (int i = 0; i < units.size(); ++i)
 			{
-				printf(m_plan.actions[i - 1]->GetName());
-				printf("\n");
+				units[i]->planComplete = false;
+				units[i]->GetPlan();
 			}
-		}
-		else
-		{
-			printf("Plan Failed \n");
 		}
 	}
 }

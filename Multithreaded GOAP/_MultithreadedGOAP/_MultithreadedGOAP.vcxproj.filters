@@ -41,5 +41,8 @@
     <ClInclude Include="ThreadedQueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GOAPPlan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

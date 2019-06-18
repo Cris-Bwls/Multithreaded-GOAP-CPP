@@ -126,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GOAPActionBase.h" />
+    <ClInclude Include="GOAPPlan.h" />
     <ClInclude Include="GOAPPlanner.h" />
     <ClInclude Include="GOAPWorldState.h" />
     <ClInclude Include="GOAPWrapper.h" />

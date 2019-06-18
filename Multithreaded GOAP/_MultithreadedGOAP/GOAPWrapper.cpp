@@ -15,7 +15,10 @@ GOAPWrapper::~GOAPWrapper()
 	delete m_planner;
 }
 
-void GOAPWrapper::AddPlan(PlanData planData)
+/*
+	Pushes a plan to the back of the queue
+*/
+void GOAPWrapper::AddPlan(PlanData* planData)
 {
 	m_queue.Push(planData);
 	m_planner->InputWake();

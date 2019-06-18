@@ -4,8 +4,6 @@
 
 enum class EActionStatus
 {
-	// EACTIONSTATUS_
-
 	INACTIVE = 0,
 	ACTIVE,
 	DONE,
@@ -49,8 +47,7 @@ public:
 	inline char* GetName() { return m_ActionName; };
 
 	virtual bool CheckProceduralPreconditions();
-	//TEST
-	int m_nFailureCost;
+
 protected:
 	char* m_ActionName;
 

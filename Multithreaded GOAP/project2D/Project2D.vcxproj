@@ -173,6 +173,7 @@
   <ItemGroup>
     <ClCompile Include="Application2D.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application2D.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="GOAPActionMove.h" />
     <ClInclude Include="EnumPrecondition.h" />
     <ClInclude Include="GOAPActionTest.h" />
+    <ClInclude Include="Unit.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

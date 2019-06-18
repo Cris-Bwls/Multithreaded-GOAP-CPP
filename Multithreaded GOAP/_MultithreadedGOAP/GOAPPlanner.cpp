@@ -3,15 +3,20 @@
 #include "GOAPWrapper.h"
 #include <algorithm>
 #include <thread>
+#include <future>
+
+#include <iostream>
 
 using std::vector;
 
-#define NO_ONE_ACCESSING -1
+#define DEBUG false
+static int test = 0;
 
 GOAPPlanner::GOAPPlanner()
 {
 	m_planQueue.SetSortFunc([](Plan const& lhs, Plan const& rhs) {return lhs.cost > rhs.cost; });
-	m_pPreferredPlan = new Plan();
+	m_preferredPlan;
+	m_preferredPlan.cost = 0;
 	DefaultPreferred();
 	m_pEffectMap = new std::map<size_t, std::vector<GOAPActionBase*>>();
 }
@@ -19,9 +24,13 @@ GOAPPlanner::GOAPPlanner()
 
 GOAPPlanner::~GOAPPlanner()
 {
-	delete m_pPreferredPlan;
+	if (m_pEffectMap)
+		delete m_pEffectMap;
 }
 
+/*
+	Populates the effect map with the given Actions
+*/
 void GOAPPlanner::PopulateEffectMap(std::vector<GOAPActionBase*> const& actionList)
 {
 	delete m_pEffectMap;
@@ -37,18 +46,18 @@ void GOAPPlanner::PopulateEffectMap(std::vector<GOAPActionBase*> const& actionLi
 	}
 }
 
-//GOAPPlan GOAPPlanner::Planning(WorldStateProperty const & goalState, WorldState const & worldState, std::vector<GOAPActionBase*> const& actionList)
-//{
-//	ChangeWorldState(worldState);
-//	PopulateEffectMap(actionList);
-//	return MakePlan(goalState);
-//}
-
-void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData> & dataQueue, size_t const & threadCount)
+/*
+	Starts the master thread that processes plan requests 
+	and gives initial data to the workers,
+	also gives back the resulting plan,
+	stop the thread by calling Stop()
+*/
+void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t const & threadCount)
 {
 	// Start Threads
+	m_nThreadCount = threadCount;
 	vector<std::thread> threads;
-	for (int i = 0; i < threadCount; ++i)
+	for (int i = 0; i < m_nThreadCount; ++i)
 	{
 		threads.push_back(std::thread(&GOAPPlanner::Worker, this));
 	}
@@ -66,41 +75,56 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData> & dataQueue, size_t cons
 		// While work in the queue
 		while (!dataQueue.IsEmpty())
 		{
-			printf("Doing Work");
+			m_bResultWake.store(false);
+
+			if (DEBUG)
+				printf("Doing Work\n");
 
 			// Get Work
-			PlanData work; 
-			bool exists = dataQueue.Pop(work);
+			PlanData* pWork; 
+			bool exists = dataQueue.Pop(pWork);
+			std::promise<GOAPPlan> promisedData;
+			*(pWork->pResult) = promisedData.get_future();
 
 			// If work is invalid skip
 			if (!exists)
 				continue;
 
 			// Check if no plan is needed
-			auto worldStateData = work.pWorldState->properties[work.pGoalState->nIdentifier].bData;
-			auto goalStateData = work.pGoalState->bData;
+			auto worldStateData = pWork->pWorldState->properties[pWork->pGoalState->nIdentifier].bData;
+			auto goalStateData = pWork->pGoalState->bData;
 			if (worldStateData == goalStateData)
 			{
-				work.pResult->isSuccessful = true;
-				*(work.pNotification) = true;
+				GOAPPlan plan;
+				plan.isSuccessful = true;
+
+				promisedData.set_value(plan);
 				continue;
 			}
 
 			// Setup Planner with generalised data
-			m_WorldState = (*(work.pWorldState));
-			PopulateEffectMap(*(work.pActionList));
+			m_WorldState = (*(pWork->pWorldState));
+			PopulateEffectMap(*(pWork->pActionList));
 
-			m_pGoalState = work.pGoalState;
+			m_pGoalState = pWork->pGoalState;
 
-			// Add work to queue
-			Plan plan;
-			plan.isComplete = false;
-			plan.cost = 0;
-			plan.worldState = &m_WorldState;
-			plan.data = &GOAPPlan();
+			// Get Initial Actions that cause required effect
+			ActionList currentEffectActions = (*m_pEffectMap)[m_pGoalState->nIdentifier];
+		
+			// Assign those actions to a plan each and add that to a thread workload
+			for (size_t i = 0; i < currentEffectActions.size(); ++i)
+			{
+				auto pAction = currentEffectActions[i];
 
-			m_planQueue.PushSorted(plan);
+				// Add work to queue
+				Plan plan;
+				plan.isComplete = false;
+				plan.cost = pAction->GetCost();
+				plan.worldState = &m_WorldState;
+				plan.data.actions.push_back(pAction);
 
+				m_planQueue.PushSorted(plan);
+			}
 			// Wake the workers
 			WakeWorkers();
 
@@ -113,7 +137,18 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData> & dataQueue, size_t cons
 
 			// Send off result
 			m_mxPreferredPlan.lock();
-			work.pResult = m_pPreferredPlan->data;
+			promisedData.set_value(m_preferredPlan.data);
+			if (DEBUG)
+			{
+				if (m_preferredPlan.data.isSuccessful)
+				{
+					printf("Success\n");
+				}
+				else
+				{
+					printf("FAILURE\n");
+				}
+			}
 			m_mxPreferredPlan.unlock();
 
 			// Reset Preferred
@@ -123,256 +158,43 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData> & dataQueue, size_t cons
 		m_bInputWake = false;
 	}
 
+	// join workers before ending
+	for (int i = 0; i < threads.size(); ++i)
+	{
+		threads[i].join();
+	}
+	if (DEBUG)
+		printf("Planner Joined");
 	return;
 }
 
+/*
+	Stops the threads
+*/
+void GOAPPlanner::Stop()
+{
+	m_bStopped.store(true);
+
+	// Wakes any sleeping workers so they stop
+	WakeWorkers();
+}
+
+/*
+	Wakes the Planner if it is waiting for input
+*/
 void GOAPPlanner::InputWake()
 {
 	std::unique_lock<std::mutex> inputLock(m_mxInputWake);
 	m_bInputWake = true;
 	m_cvInputWake.notify_all();
-	printf("INPUT WAKE\n");
+	if(DEBUG)
+		printf("INPUT WAKE\n");
 }
 
-//GOAPPlan GOAPPlanner::MakePlan(WorldStateProperty const& goalState)
-//{
-//	Plan preferredPlan;
-//	preferredPlan.cost = INT_MAX;
-//
-//	vector<vector<Plan>> threadedPlans;
-//	for (int i = 0; i < m_nThreadCount; ++i)
-//	{
-//		threadedPlans.push_back(vector<Plan>());
-//	}
-//
-//	auto worldStateData = m_WorldState.properties[goalState.nIdentifier].bData;
-//	auto goalStateData = goalState.bData;
-//
-//	// Check if goal state is current world state (No actions needed)
-//	if (worldStateData == goalStateData)
-//		return preferredPlan.data;
-//
-//	// Get Initial Actions that cause required effect
-//	auto currentEffectActions = m_EffectMap[goalState.nIdentifier];
-//
-//	// Assign those actions to a plan each and add that to a thread workload
-//	for (size_t i = 0; i < currentEffectActions.size(); ++i)
-//	{
-//		auto pAction = currentEffectActions[i];
-//
-//		// Plan for action
-//		Plan currentPlan;
-//		currentPlan.isComplete = false;
-//		currentPlan.cost = pAction->GetCost();
-//		currentPlan.worldState = m_WorldState;
-//		currentPlan.data.actions.push_back(pAction);
-//
-//		// Add to thread workload and sort by cost
-//		int nThread = i % m_nThreadCount;
-//		threadedPlans[nThread].push_back(currentPlan);
-//		std::push_heap(threadedPlans[nThread].begin(), threadedPlans[nThread].end(), 
-//			[](Plan const& lhs, Plan const& rhs) {return lhs.cost < rhs.cost; });
-//	}
-//
-//	vector<std::thread> threads;
-//
-//	// Bad Threading
-//	/*
-//	for (int i = 1; i < m_nThreadCount; ++i)
-//	{
-//		// START THREADS HERE
-//		threads.push_back(std::thread(&GOAPPlanner::ThreadPlan, this, std::ref(threadedPlans[i]), 
-//										std::ref(preferredPlan), std::ref(accessing), 
-//										std::ref(i), std::ref(goalState)));
-//	}
-//	*/
-//
-//	//MAIN THREAD
-//	ThreadPlan(threadedPlans[0], preferredPlan, accessing, 0, goalState);
-//
-//	// JOIN THREADS HERE
-//	for (int i = 0; i < threads.size(); ++i)
-//	{
-//		threads[i].join();
-//	}
-//
-//	// TEMP
-//	return preferredPlan.data;
-//}
-
-//void GOAPPlanner::ThreadPlan(std::vector<Plan>& plans, Plan & preferredPlan, atomic<int> & accessing, size_t const& threadCount, WorldStateProperty const& goalState)
-//{	
-//	// While there are incomplete plans
-//	size_t completedPlans = 0;
-//	while (completedPlans < plans.size())
-//	{
-//		// Sort plans by  
-//		std::sort(plans.begin(), plans.end(), 
-//			[](Plan const& lhs, Plan const& rhs) {return lhs.cost < rhs.cost; });
-//
-//		//Work on lowest cost plan
-//		Plan* currentPlan = &plans[0];
-//
-//		// IF COST GREATER THAN PREFFERED
-//		if (preferredPlan.cost < currentPlan->cost)
-//			return;
-//
-//		// PLAN COMPLETE
-//		if (currentPlan->isComplete)
-//		{
-//			bool waiting = true;
-//			while (waiting)
-//			{
-//				// Get Access
-//				if (accessing.load(std::memory_order::memory_order_acquire) == NO_ONE_ACCESSING)
-//				{
-//					// Lock Access
-//					accessing.store(threadCount, std::memory_order::memory_order_release);
-//
-//					// Check Preferred
-//
-//					// IF current plan is cheaper replace preferred plan
-//					if (preferredPlan.cost > currentPlan->cost)
-//					{
-//						preferredPlan = *currentPlan;
-//					}
-//					// ELIF cost is equal
-//					else if (preferredPlan.cost == currentPlan->cost)
-//					{
-//						// IF current plan is shorter replace preferred plan
-//						if (preferredPlan.data.actions.size() > currentPlan->data.actions.size())
-//							preferredPlan = *currentPlan;
-//					}
-//
-//					// Unlock Access
-//					accessing.store(NO_ONE_ACCESSING, std::memory_order::memory_order_release);
-//
-//					waiting = false;
-//				}
-//
-//			}
-//			// EARLY EXIT (Not sure if optimal)
-//			return;
-//		}
-//
-//		// Reset plan world state
-//		WorldState planWorldState = m_WorldState;
-//
-//		// For each of the actions in the plan
-//		bool loopActions = true;
-//		int actionCount = currentPlan->data.actions.size() - 1;
-//		while (actionCount >= 0 && loopActions)
-//		{
-//			auto currentAction = currentPlan->data.actions[actionCount];
-//
-//			// Get Preconditions
-//			auto preconditions = currentAction->GetPreConditionList();
-//			bool allSatisfied = false;
-//
-//			vector<WorldStateProperty> requiredEffects;
-//
-//			// For each Precondition
-//			for (int i = 0; i < preconditions.size(); ++i)
-//			{
-//				size_t nIdent = preconditions[i].nIdentifier;
-//				bool neededData = preconditions[i].bData;
-//
-//				// Get related data from the world state
-//				bool worldData = planWorldState.properties[nIdent].bData;
-//
-//				// IF precondition is satisfied
-//				if (neededData == worldData)
-//				{
-//					allSatisfied = true;
-//				}
-//				// Precondition needs to be satisfied
-//				else
-//				{
-//					allSatisfied = false;
-//
-//					// Add to Required effect list
-//					requiredEffects.push_back(preconditions[i]);
-//				}
-//			} // END precondition check loop
-//
-//			// Action Ready to be used
-//			if (allSatisfied)
-//			{
-//				// Add all effects onto plan world state
-//				auto effects = currentAction->GetEffectList();
-//				for (int i = 0; i < effects.size(); ++i)
-//				{
-//					size_t effectIdent = effects[i];
-//					planWorldState.properties[effectIdent].bData = true;
-//				}
-//
-//				// Continue to next action
-//				actionCount--;
-//				continue;
-//			}
-//			// List of new plans
-//			vector<Plan> newPlans;
-//			
-//			// Add actions for all required effects
-//			//for (int i = 0; i < requiredEffects.size(); ++i)
-//			if (requiredEffects.size() > 0)
-//			{
-//				size_t ident = requiredEffects[0].nIdentifier;
-//				auto actions = m_EffectMap[ident];
-//				
-//				// There are no actions to take
-//				if (!(actions.size() > 0))
-//				{
-//					// Plan can not be completed
-//					currentPlan->cost = INT_MAX;
-//					currentPlan->isComplete = true;
-//					completedPlans++;
-//				}
-//				for (int j = 1; j < actions.size(); ++j)
-//				{
-//						// actions assigned to new plans
-//						Plan newPlan;
-//						newPlan.isComplete = false;
-//						newPlan.data.isSuccessful = false;
-//
-//						for (int k = 0; k < currentPlan->data.actions.size(); k++)
-//						{
-//							newPlan.data.actions.push_back(currentPlan->data.actions[k]);
-//						}
-//
-//						newPlan.data.actions.push_back(actions[j]);
-//						newPlan.cost = currentPlan->cost + actions[j]->GetCost();
-//
-//						// Add newPlan to list of plans
-//						newPlans.push_back(newPlan);
-//				}
-//
-//				// First action assigned to this plan
-//				currentPlan->data.actions.push_back(actions[0]);
-//				currentPlan->cost += actions[0]->GetCost();
-//
-//				// New Actions so break out of action loop
-//				loopActions = false;
-//			}
-//			
-//			for (int i = 0; i < newPlans.size(); ++i)
-//			{
-//				plans.push_back(newPlans[i]);
-//			}
-//		}// END Action loop
-//
-//		// Check if plan completes the goal state
-//		bool goalData = goalState.bData;
-//		bool planData = planWorldState.properties[goalState.nIdentifier].bData;
-//		if (goalData == planData)
-//		{
-//			currentPlan->isComplete = true;
-//			currentPlan->data.isSuccessful = true;
-//		}
-//
-//	}// END Plan Loop
-//}
-
+/*
+	Works on the plan one piece at a time,
+	adding pieces if required and telling the master thread when a plan is complete
+*/
 void GOAPPlanner::Worker()
 {
 	bool isComplete = false;
@@ -386,22 +208,34 @@ void GOAPPlanner::Worker()
 		{
 			m_cvWakeWorker.wait(workerLock);
 		}
+
+		if (workerLock.owns_lock())
+			workerLock.unlock();
+
 		// While work in the queue
 		while (!m_planQueue.IsEmpty())
 		{
 			isComplete = false;
 
 			// Get Work
-			Plan pCurrent;
-			bool exists = m_planQueue.Pop(pCurrent);
+			Plan current;
+			bool exists = m_planQueue.Pop(current);
 
 			// IF current is invalid
 			if (!exists)
+			{
+				if (DEBUG)
+					printf("Current is Invalid, Skipping #%i\n", std::this_thread::get_id());
 				continue;
+			}
 
-			// IF cost greater than preferred
-			if (m_pPreferredPlan->cost < pCurrent.cost)
+			// IF preferred plan is cheaper
+			if (m_preferredPlan.cost < current.cost)
+			{
+				if (DEBUG)
+					printf("Preferred is cheaper, Skipping #%i\n", std::this_thread::get_id());
 				continue;
+			}
 			
 
 			// Reset plan world state
@@ -409,10 +243,10 @@ void GOAPPlanner::Worker()
 
 			// For each of the actions in the plan
 			bool loopActions = true;
-			int actionCount = pCurrent.data->actions.size() - 1;
+			int actionCount = current.data.actions.size() - 1;
 			while (actionCount >= 0 && loopActions)
 			{
-				auto currentAction = pCurrent.data->actions[actionCount];
+				auto currentAction = current.data.actions[actionCount];
 
 				// Get Preconditions
 				auto preconditions = currentAction->GetPreConditionList();
@@ -466,37 +300,41 @@ void GOAPPlanner::Worker()
 				if (requiredEffects.size() > 0)
 				{
 					size_t ident = requiredEffects[0].nIdentifier;
-					auto actions = (*m_pEffectMap)[ident];
+					ActionList actions = (*m_pEffectMap)[ident];
 
 					// There are no actions to take
-					if (!(actions.size() > 0))
+					if ((actions.size() == 0))
 					{
+						printf("No Actions to fulfill effect, Skipping #%i\n", std::this_thread::get_id());
+
 						// Plan can not be completed
-						pCurrent.cost = INT_MAX;
-						pCurrent.isComplete = true;
+						current.cost = INT_MAX;
+						current.isComplete = true;
+						loopActions = false;
+						continue;
 					}
 					for (int j = 1; j < actions.size(); ++j)
 					{
 						// actions assigned to new plans
 						Plan newPlan;
 						newPlan.isComplete = false;
-						newPlan.data->isSuccessful = false;
+						newPlan.data.isSuccessful = false;
 
-						for (int k = 0; k < pCurrent.data->actions.size(); k++)
+						for (int k = 0; k < current.data.actions.size(); k++)
 						{
-							newPlan.data->actions.push_back(pCurrent.data->actions[k]);
+							newPlan.data.actions.push_back(current.data.actions[k]);
 						}
 
-						newPlan.data->actions.push_back(actions[j]);
-						newPlan.cost = pCurrent.cost + actions[j]->GetCost();
+						newPlan.data.actions.push_back(actions[j]);
+						newPlan.cost = current.cost + actions[j]->GetCost();
 
 						// Add newPlan to list of plans
 						newPlans.push_back(newPlan);
 					}
 
 					// First action assigned to this plan
-					pCurrent.data->actions.push_back(actions[0]);
-					pCurrent.cost += actions[0]->GetCost();
+					current.data.actions.push_back(actions[0]);
+					current.cost += actions[0]->GetCost();
 
 					// New Actions so break out of action loop
 					loopActions = false;
@@ -508,9 +346,11 @@ void GOAPPlanner::Worker()
 
 					// Reset signouts and wake workers
 					m_nCompletedThreads.store(0);
+
 					WakeWorkers();
 
-					printf("RESET SIGNOUTS\n");
+					if (DEBUG)
+						printf("RESET SIGNOUTS #%i\n", std::this_thread::get_id());
 				}
 			}// END Action loop
 
@@ -519,23 +359,39 @@ void GOAPPlanner::Worker()
 			bool planData = planWorldState.properties[m_pGoalState->nIdentifier].bData;
 			if (goalData == planData)
 			{
-				pCurrent.isComplete = true;
-				pCurrent.data->isSuccessful = true;
+				current.isComplete = true;
+				current.data.isSuccessful = true;
 
 				std::lock_guard<std::mutex> preferred(m_mxPreferredPlan);
 
 				// IF current plan is cheaper replace preferred plan
-				if (m_pPreferredPlan->cost > pCurrent.cost)
+				if (m_preferredPlan.cost > current.cost)
 				{
-					m_pPreferredPlan = &pCurrent;
+					m_preferredPlan = current;
 				}
 				// ELIF cost is equal
-				else if (m_pPreferredPlan->cost == pCurrent.cost)
+				else if (m_preferredPlan.cost == current.cost)
 				{
 					// IF current plan is shorter replace preferred plan
-					if (m_pPreferredPlan->data->actions.size() > pCurrent.data->actions.size())
-						m_pPreferredPlan = &pCurrent;
+					if (m_preferredPlan.data.actions.size() > current.data.actions.size())
+						m_preferredPlan = current;
 				}
+			}
+			else
+			{
+				m_planQueue.PushSorted(current);
+			}
+
+			// TEST
+			if (DEBUG)
+			{
+				printf("PLAN #%i\n", std::this_thread::get_id());
+				for (int i = 0; i < current.data.actions.size(); ++i)
+				{
+					printf("%i - %s\n", i, current.data.actions[i]->GetName());
+				}
+				printf("Remaining Plans in queue = %i\n", m_planQueue.Size());
+				printf("\n");
 			}
 		}
 		if (!isComplete)
@@ -543,42 +399,67 @@ void GOAPPlanner::Worker()
 			// Sign out
 			m_bWorkersAwake.store(false);
 			m_nCompletedThreads.fetch_add(1);
+			test++;
 			isComplete = true;
-			printf("signed out %i\n", m_nCompletedThreads.load());
+
+			if (DEBUG)
+				printf("signed out %i #%i\n", m_nCompletedThreads.load(), std::this_thread::get_id());
 
 			// All threads finished
-			if (m_nCompletedThreads.load() == m_nThreadCount)
+			if (m_nCompletedThreads.compare_exchange_strong(m_nThreadCount, 0))
+			//if (m_nCompletedThreads.load() == m_nThreadCount)
 			{
 				// Wake the planner
 				ResultWake();
+				//m_nCompletedThreads.store(0);
 			}
 		}
 	}
 
+	// Join the thread
+	if (DEBUG)
+		printf("Worker Joined #%i\n", std::this_thread::get_id());
+
+	// Wake the master thread, regardless of where it was waiting so it can join
+	InputWake();
+	ResultWake();
 	return;
 }
 
+/*
+	Wakes the planner if it is waiting for the result
+*/
 void GOAPPlanner::ResultWake()
 {
-	std::unique_lock<std::mutex> resultLock(m_mxResultWake);
+	std::lock_guard<std::mutex> resultLock(m_mxResultWake);
 	m_bResultWake.store(true);
 	m_cvResultWake.notify_all();
-	printf("RESULT WAKE\n");
+	if (DEBUG)
+		printf("RESULT WAKE #%i\n", std::this_thread::get_id);
 }
 
+/*
+	Wakes the workers when there is a data for them to work on
+*/
 void GOAPPlanner::WakeWorkers()
 {
-	std::unique_lock<std::mutex> workerLock(m_mxWakeWorker);
+	std::lock_guard<std::mutex> workerLock(m_mxWakeWorker);
+
 	m_bWorkersAwake.store(true);
 	m_cvWakeWorker.notify_all();
-	printf("WAKE WORKERS\n");
+	if (DEBUG)
+		printf("WAKE WORKERS #%i\n", std::this_thread::get_id());
 }
 
+/*
+	Puts the preferred plan back to default settings
+*/
 void GOAPPlanner::DefaultPreferred()
 {
 	std::lock_guard<std::mutex> preferredLock(m_mxPreferredPlan);
-	m_pPreferredPlan->isComplete = false;
-	m_pPreferredPlan->worldState = nullptr;
-	m_pPreferredPlan->data = nullptr;
-	m_pPreferredPlan->cost = SIZE_MAX;
+	m_preferredPlan.isComplete = false;
+	m_preferredPlan.worldState = nullptr;
+	m_preferredPlan.data.actions.clear();
+	m_preferredPlan.data.isSuccessful = false;
+	m_preferredPlan.cost = SIZE_MAX;
 }

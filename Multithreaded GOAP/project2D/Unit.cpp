@@ -81,32 +81,36 @@ void Unit::ReportNewPlan()
 	auto endTime = high_resolution_clock::now();
 	auto planTime = duration_cast<duration<double>>(endTime - m_startPlan);
 
-	// Print time that it took for this plan to be finished and observed
-	std::cout << planTime.count();
-	std::cout << std::endl;
-	
+	// Add time to total time	
 	totalTimeTaken += planTime.count();
 	count++;
 	
-	// Print average time
-	std::cout << "AVG Time Taken = " << totalTimeTaken / count;
-	std::cout << std::endl;
-	
-	// Print new plan to console
-	printf("Final Plan @ Unit #%i \n", m_nUnitNumber);
-	if (m_activePlan.isSuccessful)
+	if (m_bPrintToConsole)
 	{
-		// Print all the actions
-		for (auto i = m_activePlan.actions.size(); i > 0; --i)
+		// Print time that it took for this plan to be finished and observed
+		std::cout << planTime.count();
+		std::cout << std::endl;
+
+		// Print average time
+		std::cout << "AVG Time Taken = " << totalTimeTaken / count;
+		std::cout << std::endl;
+
+		// Print new plan to console
+		printf("Final Plan @ Unit #%i \n", m_nUnitNumber);
+		if (m_activePlan.isSuccessful)
 		{
-			printf(m_activePlan.actions[i - 1]->GetName());
-			printf("\n");
+			// Print all the actions
+			for (auto i = m_activePlan.actions.size(); i > 0; --i)
+			{
+				printf(m_activePlan.actions[i - 1]->GetName());
+				printf("\n");
+			}
 		}
-	}
-	else
-	{
-		// Print if it failed to find a solution (Shouldnt happen with current setup)
-		printf("Plan Failed \n");
+		else
+		{
+			// Print if it failed to find a solution (Shouldnt happen with current setup)
+			printf("Plan Failed \n");
+		}
 	}
 
 	// create a new future

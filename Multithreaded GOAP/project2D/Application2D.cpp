@@ -49,12 +49,6 @@ void Application2D::shutdown() {
 	}
 }
 
-static bool test;
-static std::chrono::steady_clock::time_point startPlan;
-
-static double totalTimeTaken = 0;
-static int count = 0;
-
 void Application2D::update(float deltaTime) {
 
 	bool complete = true;
@@ -63,19 +57,23 @@ void Application2D::update(float deltaTime) {
 		units[i]->Update();
 		complete &= units[i]->planComplete;
 	}
-	if (complete && test)
+	if (complete && calculating)
 	{
 		auto endTime = high_resolution_clock::now();
-		auto planTime = duration_cast<duration<double>>(endTime - startPlan);
-		totalTimeTaken += planTime.count();
-		count++;
+		auto planTime = duration_cast<duration<double>>(endTime - m_startTime);
 
-		std::cout << planTime.count();
+		// Print time that it took for this group to be finished and observed
+		std::cout << "Time taken for this group = " <<planTime.count();
 		std::cout << std::endl;
-		std::cout << "Average Time = " << totalTimeTaken / count;
+
+		m_totalTime += planTime.count();
+		m_count++;
+
+		// Print average time
+		std::cout << "AVG Time Taken = " << m_totalTime / m_count;
 		std::cout << std::endl;
-		printf("DONE");
-		test = false;
+		calculating = false;
+		printf("Done");
 	}
 
 	m_timer += deltaTime;
@@ -91,13 +89,21 @@ void Application2D::update(float deltaTime) {
 	{
 		if (input->isKeyDown(aie::INPUT_KEY_1))
 		{
-			startPlan = high_resolution_clock::now();
-			test = true;
+			calculating = true;
+			m_startTime = high_resolution_clock::now();
 			system("cls");
 			for (int i = 0; i < units.size(); ++i)
 			{
 				units[i]->planComplete = false;
 				units[i]->GetPlan();
+			}
+		}
+
+		if (input->isKeyDown(aie::INPUT_KEY_2))
+		{
+			for (size_t i = 0; i < units.size(); ++i)
+			{
+				units[i]->m_bPrintToConsole = !units[i]->m_bPrintToConsole;
 			}
 		}
 	}
@@ -116,6 +122,9 @@ void Application2D::draw() {
 	sprintf_s(fps, 32, "FPS: %i", getFPS());
 	m_2dRenderer->drawText(m_font, fps, 0, getWindowHeight() - 32);
 	m_2dRenderer->drawText(m_font, "Press ESC to quit!", 0, getWindowHeight() - 64);
+	m_2dRenderer->drawText(m_font, "Press 1 to cause units to make plan", 0, getWindowHeight() - 128);
+	m_2dRenderer->drawText(m_font, "Press 2 to toggle units printing to console", 0, getWindowHeight() - 160);
+	m_2dRenderer->drawText(m_font, "(Printing to console substantially slows down results)", 0, getWindowHeight() - 192);
 
 	// done drawing sprites
 	m_2dRenderer->end();

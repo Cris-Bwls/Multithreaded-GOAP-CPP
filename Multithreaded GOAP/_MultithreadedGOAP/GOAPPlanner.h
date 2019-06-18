@@ -7,9 +7,9 @@
 #include <memory>
 #include "ThreadedQueue.h"
 #include "GOAPWorldState.h"
+#include "GOAPPlan.h"
 
 class GOAPActionBase;
-struct GOAPPlan;
 struct PlanData;
 
 class GOAPPlanner

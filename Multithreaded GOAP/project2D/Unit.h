@@ -14,6 +14,7 @@ public:
 	void Update();
 
 	bool planComplete = true;
+	bool m_bPrintToConsole = true;
 
 private:
 	void ReportNewPlan();

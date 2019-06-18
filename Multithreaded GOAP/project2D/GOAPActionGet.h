@@ -13,7 +13,7 @@ public:
 		m_PreConditionList.push_back({ (uint)EPreconditions::NONE, true });
 		m_EffectList.push_back({ (uint)EPreconditions::HaveWeapon_Melee });
 
-		m_nCost = 15;
+		m_nCost = 10;
 	}
 
 	bool Act() { return true; };

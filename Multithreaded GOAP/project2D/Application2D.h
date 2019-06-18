@@ -30,7 +30,10 @@ protected:
 	GOAPWrapper* wrapper;
 
 	std::vector<Unit*> units;
-	bool calculating;
+	bool calculating = false;
+	std::chrono::steady_clock::time_point m_startTime;
+	double m_totalTime = 0;
+	int m_count = 0;
 
 	float m_timer;
 };

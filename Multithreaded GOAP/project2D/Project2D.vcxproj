@@ -181,7 +181,6 @@
     <ClInclude Include="GOAPActionGet.h" />
     <ClInclude Include="GOAPActionMove.h" />
     <ClInclude Include="EnumPrecondition.h" />
-    <ClInclude Include="GOAPActionTest.h" />
     <ClInclude Include="Unit.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -10,7 +10,6 @@
 using std::vector;
 
 #define DEBUG false
-static int test = 0;
 
 GOAPPlanner::GOAPPlanner()
 {
@@ -52,7 +51,7 @@ void GOAPPlanner::PopulateEffectMap(std::vector<GOAPActionBase*> const& actionLi
 	also gives back the resulting plan,
 	stop the thread by calling Stop()
 */
-void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t const & threadCount)
+void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t threadCount)
 {
 	// Start Threads
 	m_nThreadCount = threadCount;
@@ -70,6 +69,8 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t con
 		while (!m_bInputWake)
 		{
 			m_cvInputWake.wait(inputLock);
+			if (DEBUG)
+				printf("Woke due to Input && %i\n", m_bInputWake);
 		}
 
 		// While work in the queue
@@ -133,6 +134,8 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t con
 			while (!m_bResultWake)
 			{
 				m_cvResultWake.wait(resultLock);
+				if (DEBUG)
+					printf("Woke due to Result && %i\n", m_bResultWake.load());
 			}
 
 			// Send off result
@@ -146,7 +149,9 @@ void GOAPPlanner::StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t con
 				}
 				else
 				{
-					printf("FAILURE\n");
+					printf("\n");
+					printf("!!!FAILURE!!!\n");
+					printf("\n");
 				}
 			}
 			m_mxPreferredPlan.unlock();
@@ -197,7 +202,7 @@ void GOAPPlanner::InputWake()
 */
 void GOAPPlanner::Worker()
 {
-	bool isComplete = false;
+	//bool isComplete = false;
 
 	// While Running
 	while (!m_bStopped)
@@ -208,14 +213,20 @@ void GOAPPlanner::Worker()
 		{
 			m_cvWakeWorker.wait(workerLock);
 		}
+		m_nAwakeWorkers.fetch_add(1);
+
+		if (DEBUG)
+			printf("Worker Woke up %i\n", std::this_thread::get_id());
 
 		if (workerLock.owns_lock())
 			workerLock.unlock();
 
+		//isComplete = false;
 		// While work in the queue
 		while (!m_planQueue.IsEmpty())
 		{
-			isComplete = false;
+			if (DEBUG)
+				printf("*Worker Has work %i\n", std::this_thread::get_id());
 
 			// Get Work
 			Plan current;
@@ -386,32 +397,33 @@ void GOAPPlanner::Worker()
 			if (DEBUG)
 			{
 				printf("PLAN #%i\n", std::this_thread::get_id());
-				for (int i = 0; i < current.data.actions.size(); ++i)
-				{
-					printf("%i - %s\n", i, current.data.actions[i]->GetName());
-				}
+				//for (int i = 0; i < current.data.actions.size(); ++i)
+				//{
+				//	printf("%i - %s\n", i, current.data.actions[i]->GetName());
+				//}
 				printf("Remaining Plans in queue = %i\n", m_planQueue.Size());
 				printf("\n");
 			}
 		}
-		if (!isComplete)
+		if (!m_bStopped)
 		{
 			// Sign out
 			m_bWorkersAwake.store(false);
 			m_nCompletedThreads.fetch_add(1);
-			test++;
-			isComplete = true;
+			//isComplete = true;
 
 			if (DEBUG)
-				printf("signed out %i #%i\n", m_nCompletedThreads.load(), std::this_thread::get_id());
+			{
+				printf("**signed out %i #%i\n", m_nCompletedThreads.load(), std::this_thread::get_id());
+			}
 
 			// All threads finished
-			if (m_nCompletedThreads.compare_exchange_strong(m_nThreadCount, 0))
-			//if (m_nCompletedThreads.load() == m_nThreadCount)
+			size_t awakeCount = m_nAwakeWorkers.load();
+			if (m_nCompletedThreads.compare_exchange_strong(awakeCount, 0))
 			{
 				// Wake the planner
+				m_nAwakeWorkers.store(0);
 				ResultWake();
-				//m_nCompletedThreads.store(0);
 			}
 		}
 	}

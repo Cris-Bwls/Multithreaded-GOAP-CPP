@@ -3,8 +3,9 @@
 
 GOAPWrapper::GOAPWrapper(size_t const & threadCount)
 {
+	m_nThreadCount = threadCount;
 	m_planner = new GOAPPlanner();
-	m_plannerThread = std::thread(&GOAPPlanner::StartThreaded, m_planner, std::ref(m_queue), std::ref(threadCount));
+	m_plannerThread = std::thread(&GOAPPlanner::StartThreaded, m_planner, std::ref(m_queue), m_nThreadCount);
 }
 
 GOAPWrapper::~GOAPWrapper()

@@ -19,7 +19,7 @@ public:
 	~GOAPPlanner();
 	void PopulateEffectMap(std::vector<GOAPActionBase*> const& actionList);
 	
-	void StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t const& threadCount);
+	void StartThreaded(ThreadedQueue<PlanData*> & dataQueue, size_t threadCount);
 
 	void Stop();
 	void InputWake();
@@ -46,6 +46,7 @@ private:
 	std::atomic<bool> m_bStopped = false;
 	std::atomic<bool> m_bDoingWork = false;
 	std::atomic<size_t> m_nCompletedThreads = 0;
+	std::atomic<size_t> m_nAwakeWorkers = 0;
 	size_t m_nThreadCount = 1;
 
 	// Planner waiting on input

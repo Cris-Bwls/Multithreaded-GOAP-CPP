@@ -34,5 +34,6 @@ private:
 	GOAPPlanner* m_planner;
 	ThreadedQueue<PlanData*> m_queue;
 	std::thread m_plannerThread;
+	size_t m_nThreadCount;
 };
 
